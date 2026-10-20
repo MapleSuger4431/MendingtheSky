@@ -42,3 +42,8 @@ crashlytics-build.properties
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Codely CLI local config
+/.codely-cli/
+# Verification screenshots/recordings
+/screenshots/
