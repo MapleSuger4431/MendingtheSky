@@ -64,6 +64,20 @@ namespace MendingtheSky
                 inventoryManager.GenerateInitialInventory(levelConfig, gridManager);
                 Debug.Log("[Phase2DebugDriver] I 测试：背篓灵石已重新生成");
             }
+            if (Input.GetKeyDown(KeyCode.C))
+            {
+                // 阶段 3 调试：锅未实现前，手动把前几块设为已煮，便于测试拖拽/旋转/放置
+                int cooked = 0;
+                foreach (LingShi ls in inventoryManager.GetAll())
+                {
+                    if (ls.GetState() == LingShiState.InBasket && cooked < 6)
+                    {
+                        ls.SetState(LingShiState.Cooked);
+                        cooked++;
+                    }
+                }
+                Debug.Log($"[Phase2DebugDriver] C 测试：{cooked} 块灵石设为已煮");
+            }
         }
 
         private void OnGUI()
@@ -77,7 +91,7 @@ namespace MendingtheSky
             GUILayout.Label($"场上洞数：{gridManager.GetUnfilledHoleCount()}，配额：{gridManager.GetGeneratedHoleCount()}");
             GUILayout.Label($"空缺格数：{gridManager.GetUnfilledCellCount()}");
             GUILayout.Label($"背篓灵石：{inventoryManager.GetAll().Count}（未煮 {inventoryManager.GetInBasketCount()} / 已煮 {inventoryManager.GetCookedCount()}）");
-            GUILayout.Label("空格=新洞　K=全洞　L=重开　I=重发灵石");
+            GUILayout.Label("空格=新洞　K=全洞　L=重开　I=重发灵石　C=模拟煮熟");
             GUILayout.EndArea();
         }
     }

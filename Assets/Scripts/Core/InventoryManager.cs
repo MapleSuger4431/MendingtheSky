@@ -21,6 +21,7 @@ namespace MendingtheSky
         private readonly List<LingShi> lingShiList = new List<LingShi>();
         private GridManager gridManager;
         private readonly System.Random random = new System.Random();
+        private int nextSortingIndex = 0;
 
         public void GenerateInitialInventory(LevelConfig levelConfig, GridManager gridManager)
         {
@@ -44,7 +45,7 @@ namespace MendingtheSky
                 maxPiecesPerHole, random);
             foreach (List<Vector2Int> cells in pieces)
             {
-                CreateLingShi(levelConfig, cells, GetSpawnPosition());
+                CreateLingShi(levelConfig, cells, GetSpawnPosition(), hole.GetHoleId());
             }
         }
 
@@ -57,11 +58,23 @@ namespace MendingtheSky
             }
             ls.SetState(LingShiState.Cooked);
             ls.SetTargetScale(itemScale);
-            SpawnAtBasketTop(ls);
+            ReturnToBasket(ls);
+        }
+
+        /// <summary>把灵石放回背篓（保持当前状态；InBasket 与 Cooked 都适用）。</summary>
+        public void ReturnToBasket(LingShi ls)
+        {
+            if (ls == null)
+            {
+                return;
+            }
             if (!lingShiList.Contains(ls))
             {
                 lingShiList.Add(ls);
             }
+            ls.SetTransparent(false);
+            ls.SetTargetScale(itemScale);
+            SpawnAtBasketTop(ls);
         }
 
         public void AddLingShi(LingShi ls)
@@ -175,7 +188,8 @@ namespace MendingtheSky
             return pool[pool.Length - 1] != null ? pool[pool.Length - 1].typeConfig : null;
         }
 
-        private LingShi CreateLingShi(LevelConfig levelConfig, List<Vector2Int> cells, Vector3 position)
+        private LingShi CreateLingShi(LevelConfig levelConfig, List<Vector2Int> cells, Vector3 position,
+            int sourceHoleId = -1)
         {
             if (lingShiPrefab == null)
             {
@@ -193,6 +207,10 @@ namespace MendingtheSky
             GameObject go = Instantiate(lingShiPrefab, position, Quaternion.identity, root);
             var ls = go.GetComponent<LingShi>();
             ls.Init(type, shape, position, itemScale, gridManager != null ? gridManager.GetCellSize() : 1f);
+            ls.SetSourceHoleId(sourceHoleId);
+            // 每块灵石独立的排序基准：轮廓在 base、填充在 base+1，相邻灵石之间保留分界轮廓
+            ls.SetSortingBase(5 + (nextSortingIndex % 30) * 2);
+            nextSortingIndex++;
             ls.SetVelocity(new Vector2(((float)random.NextDouble() - 0.5f) * 0.4f, 0f));
             lingShiList.Add(ls);
             return ls;

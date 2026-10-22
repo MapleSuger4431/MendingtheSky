@@ -16,9 +16,9 @@ MonoBehaviour:
   displayName: "\u84DD\u7075\u77F3"
   cookTime: 5
   qiValue: 3
-  normalSprite: {fileID: 21300000, guid: f5c177d519e1f5f4cae4bce3cc07f6cb, type: 3}
-  dustSprite: {fileID: 21300000, guid: dd781251db7e42447933693d1aaf54df, type: 3}
-  glowSprite: {fileID: 21300000, guid: f9d566d0218413248a78509fe8a0ff81, type: 3}
+  normalSprite: {fileID: 21300000, guid: 5686b156764452d4eabf25db46214500, type: 3}
+  dustSprite: {fileID: 21300000, guid: 093f11da55400af4d85545b8d84555e0, type: 3}
+  glowSprite: {fileID: 21300000, guid: 5ae1714a041ff1c4a838bd2c30c58583, type: 3}
   tintColor: {r: 1, g: 1, b: 1, a: 1}
   dustEffectPrefab: {fileID: 0}
   glowEffectPrefab: {fileID: 0}

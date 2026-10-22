@@ -47,6 +47,16 @@ namespace MendingtheSky
             new Color(0.82f, 1f, 0.86f)
         };
 
+        [Header("预览高亮（阶段 3）")]
+        [SerializeField] private GameObject previewCellPrefab;
+        [SerializeField] private Transform previewRoot;
+        [SerializeField] private Color previewValidColor = new Color(0.4f, 1f, 0.55f, 0.55f);
+        [SerializeField] private Color previewInvalidColor = new Color(1f, 0.35f, 0.35f, 0.55f);
+        [SerializeField] private Color previewWrongHoleColor = new Color(1f, 0.75f, 0.25f, 0.55f);
+        [SerializeField] private int previewSortingOrder = 4;
+
+        private readonly List<GameObject> previewInstances = new List<GameObject>();
+
         private GridManager gridManager;
         private readonly Dictionary<Vector2Int, GameObject> holeCellInstances = new Dictionary<Vector2Int, GameObject>();
         private readonly List<GameObject> edgeInstances = new List<GameObject>();
@@ -63,6 +73,10 @@ namespace MendingtheSky
             if (edgeRoot == null)
             {
                 edgeRoot = CreateRoot("EdgeRoot");
+            }
+            if (previewRoot == null)
+            {
+                previewRoot = CreateRoot("PreviewRoot");
             }
         }
 
@@ -122,6 +136,73 @@ namespace MendingtheSky
                 }
             }
             edgeInstances.Clear();
+        }
+
+        /// <summary>
+        /// 放置预览：isValid=绿色；形状匹配但来源洞不符=橙色；其他无效=红色。
+        /// 越界格自动跳过。
+        /// </summary>
+        public void ShowPreview(List<Vector2Int> cells, bool isValid, bool shapeFitsOtherHole = false)
+        {
+            ClearPreview();
+            if (cells == null || gridManager == null)
+            {
+                return;
+            }
+            Color color = isValid
+                ? previewValidColor
+                : (shapeFitsOtherHole ? previewWrongHoleColor : previewInvalidColor);
+            foreach (Vector2Int cell in cells)
+            {
+                if (!gridManager.IsInside(cell.x, cell.y))
+                {
+                    continue;
+                }
+                previewInstances.Add(CreatePreviewCell(cell, color));
+            }
+        }
+
+        public void ClearPreview()
+        {
+            foreach (GameObject instance in previewInstances)
+            {
+                if (instance != null)
+                {
+                    DestroyInstance(instance);
+                }
+            }
+            previewInstances.Clear();
+        }
+
+        private GameObject CreatePreviewCell(Vector2Int cell, Color color)
+        {
+            Vector3 pos = gridManager.GridToWorld(cell.x, cell.y);
+            float cellSize = gridManager.GetCellSize();
+            GameObject instance;
+            if (previewCellPrefab != null)
+            {
+                instance = Instantiate(previewCellPrefab, pos, Quaternion.identity, previewRoot);
+                Vector2 spriteSize = GetSpriteSize(instance);
+                instance.transform.localScale = Vector3.one * (cellSize * 0.95f / Mathf.Max(0.0001f, spriteSize.x));
+                SpriteRenderer sr = instance.GetComponentInChildren<SpriteRenderer>();
+                if (sr != null)
+                {
+                    sr.color = color;
+                    sr.sortingOrder = previewSortingOrder;
+                }
+            }
+            else
+            {
+                instance = new GameObject($"Preview_{cell.x}_{cell.y}");
+                instance.transform.SetParent(previewRoot, false);
+                instance.transform.position = pos;
+                instance.transform.localScale = Vector3.one * (cellSize * 0.9f);
+                SpriteRenderer sr = instance.AddComponent<SpriteRenderer>();
+                sr.sprite = GetFallbackSprite();
+                sr.color = color;
+                sr.sortingOrder = previewSortingOrder;
+            }
+            return instance;
         }
 
         private GameObject CreateHoleCell(int r, int c, Hole hole)

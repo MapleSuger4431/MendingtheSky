@@ -13,6 +13,14 @@ namespace MendingtheSky
         [Header("方块视觉（由 prefab 预置）")]
         [SerializeField] private GameObject blockPrefab;
         [SerializeField] private Transform blockContainer;
+        [Tooltip("填充层相对格子的放大系数（>1 让相邻块贴合无缝）")]
+        [SerializeField] private float blockOverlap = 1.03f;
+        [Tooltip("共享外轮廓贴图：每格一块、稍大、垫底；多格拼合形成整块轮廓")]
+        [SerializeField] private Sprite outlineSprite;
+        [SerializeField] private float outlineOverlap = 1.32f;
+
+        /// <summary>每块灵石独立的排序基准（轮廓=base，填充=base+1），由 InventoryManager 分配。</summary>
+        private int sortingBase = 5;
 
         private LingShiTypeConfig typeConfig;
         private LingShiShape shape;
@@ -20,6 +28,7 @@ namespace MendingtheSky
         private float cookElapsed;
         private Vector3 originPosition;
         private readonly List<Vector2Int> placedCells = new List<Vector2Int>();
+        private int sourceHoleId = -1;
         private float displayScale = 1f;
         private float targetScale = 1f;
         private float cellSize = 1f;
@@ -59,6 +68,13 @@ namespace MendingtheSky
         }
 
         public List<Vector2Int> GetCurrentCells() { return shape.GetCurrentCells(); }
+
+        /// <summary>设置本灵石的独立排序基准（轮廓=base，填充=base+1）。</summary>
+        public void SetSortingBase(int value)
+        {
+            sortingBase = value;
+            RebuildVisual();
+        }
         public int GetRotationSteps() { return shape.GetRotationSteps(); }
         public LingShiTypeConfig GetTypeConfig() { return typeConfig; }
         public LingShiState GetState() { return state; }
@@ -119,6 +135,10 @@ namespace MendingtheSky
         }
 
         public List<Vector2Int> GetPlacedCells() { return new List<Vector2Int>(placedCells); }
+
+        /// <summary>必需灵石绑定切出它的洞（评审 P0-6）；冗余灵石为 -1，可放任意洞。</summary>
+        public void SetSourceHoleId(int id) { sourceHoleId = id; }
+        public int GetSourceHoleId() { return sourceHoleId; }
 
         public void ReturnToOrigin()
         {
@@ -233,12 +253,7 @@ namespace MendingtheSky
         public void RebuildVisual()
         {
             ClearBlockInstances();
-            if (shape == null)
-            {
-                return;
-            }
-            Sprite sprite = GetStateSprite();
-            if (blockPrefab == null)
+            if (shape == null || blockPrefab == null)
             {
                 return;
             }
@@ -246,23 +261,43 @@ namespace MendingtheSky
             {
                 blockContainer = transform;
             }
+            Sprite fillSprite = GetStateSprite();
             foreach (Vector2Int cell in shape.GetCurrentCells())
             {
-                GameObject block = Instantiate(blockPrefab, blockContainer);
-                block.transform.localPosition = new Vector3(cell.y * cellSize, -cell.x * cellSize, 0f);
-                SpriteRenderer sr = block.GetComponentInChildren<SpriteRenderer>();
-                if (sr != null)
-                {
-                    if (sprite != null)
-                    {
-                        sr.sprite = sprite;
-                        float width = Mathf.Max(0.0001f, sprite.bounds.size.x);
-                        block.transform.localScale = Vector3.one * (cellSize / width);
-                    }
-                    sr.color = Color.white;
-                }
-                blockInstances.Add(block);
+                Vector3 localPos = new Vector3(cell.y * cellSize, -cell.x * cellSize, 0f);
+                // 先画轮廓（垫底），再画填充（在上），多格拼合后内部轮廓被填充盖住，只剩外缘一圈
+                CreateBlock(outlineSprite, localPos, outlineOverlap, sortingBase, Color.white, true);
+                CreateBlock(fillSprite, localPos, blockOverlap, sortingBase + 1, Color.white, false);
             }
+        }
+
+        private void CreateBlock(Sprite sprite, Vector3 localPos, float overlap, int sortingOrder,
+            Color color, bool outline)
+        {
+            if (sprite == null)
+            {
+                return;
+            }
+            GameObject block = Instantiate(blockPrefab, blockContainer);
+            block.transform.localPosition = localPos;
+            SpriteRenderer sr = block.GetComponentInChildren<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.sprite = sprite;
+                Vector2 size = sprite.bounds.size;
+                float maxDim = Mathf.Max(0.0001f, Mathf.Max(size.x, size.y));
+                block.transform.localScale = Vector3.one * (cellSize * overlap / maxDim);
+                sr.color = color;
+                sr.sortingOrder = sortingOrder;
+            }
+            if (outline)
+            {
+                foreach (Collider2D collider in block.GetComponentsInChildren<Collider2D>())
+                {
+                    collider.enabled = false;
+                }
+            }
+            blockInstances.Add(block);
         }
 
         private Sprite GetStateSprite()

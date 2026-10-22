@@ -521,6 +521,56 @@ namespace MendingtheSky
             return IsInside(r, c) && grid[r, c] == CellHole;
         }
 
+        /// <summary>
+        /// 放置灵石：按锚点把形状覆盖的所有格置为已填（grid=1），并通知所属洞填充进度。
+        /// 阶段 5 将在此触发 CheckHoleClosed → MarkHoleClosing。
+        /// </summary>
+        public void FillCells(LingShi ls, int targetRow, int targetCol)
+        {
+            if (ls == null)
+            {
+                return;
+            }
+            var placed = new List<Vector2Int>();
+            foreach (Vector2Int cell in ls.GetCurrentCells())
+            {
+                int r = targetRow + cell.x;
+                int c = targetCol + cell.y;
+                if (!IsInside(r, c))
+                {
+                    continue;
+                }
+                Hole hole = GetHoleAt(r, c);
+                grid[r, c] = CellFilled;
+                hole?.NotifyCellFilled();
+                placed.Add(new Vector2Int(r, c));
+            }
+            ls.MarkPlaced(placed);
+        }
+
+        /// <summary>从网格取下灵石：已填格恢复为缺口（grid=0），并回退洞的填充进度。</summary>
+        public void UnfillCells(LingShi ls)
+        {
+            if (ls == null)
+            {
+                return;
+            }
+            foreach (Vector2Int cell in ls.GetPlacedCells())
+            {
+                if (!IsInside(cell.x, cell.y))
+                {
+                    continue;
+                }
+                if (grid[cell.x, cell.y] != CellFilled)
+                {
+                    continue;
+                }
+                Hole hole = GetHoleAt(cell.x, cell.y);
+                hole?.NotifyCellUnfilled();
+                grid[cell.x, cell.y] = CellHole;
+            }
+        }
+
         /// <summary>场上未闭合洞数量（含已部分填的）。</summary>
         public int GetUnfilledHoleCount()
         {
