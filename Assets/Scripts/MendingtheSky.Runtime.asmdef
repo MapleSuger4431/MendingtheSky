@@ -1,7 +1,10 @@
 {
     "name": "MendingtheSky.Runtime",
     "rootNamespace": "MendingtheSky",
-    "references": [],
+    "references": [
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

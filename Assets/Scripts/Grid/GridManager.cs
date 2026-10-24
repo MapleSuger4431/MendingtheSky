@@ -103,11 +103,8 @@ namespace MendingtheSky
             }
         }
 
-        // 阶段 1 临时自驱；阶段 4 GameManager 接管后删除。
-        private void Update()
-        {
-            Tick(Time.deltaTime);
-        }
+        // 阶段 4 起：洞的动态补充由 GameManager 在 Playing 状态集中调用 Tick(dt) 驱动，
+        // 此类不再自己写 Unity Update()，避免暂停时仍生成洞或重复驱动。
 
         /// <summary>
         /// 尝试生成一个新洞（含修订版合并规则）。失败返回 null（比如网格几乎被占满）。

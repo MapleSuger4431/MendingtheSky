@@ -121,5 +121,66 @@ namespace MendingtheSky.Tests
             Object.DestroyImmediate(go);
             Object.DestroyImmediate(config);
         }
+
+        [Test]
+        public void CanTile_CutPieces_CanExactlyCoverHole()
+        {
+            // 切出来的整组灵石必须能恰好铺满原洞（切割的基本承诺）
+            var hole = new List<Vector2Int>();
+            for (int r = 0; r < 4; r++)
+            {
+                for (int c = 0; c < 5; c++)
+                {
+                    hole.Add(new Vector2Int(r, c));
+                }
+            }
+            List<List<Vector2Int>> pieces = ShapeCutter.Cut(hole, pool, 8, new System.Random(3));
+            Assert.IsTrue(ShapeCutter.CanTile(hole, pieces), "切出的块应能铺满原洞");
+        }
+
+        [Test]
+        public void CanTile_DeadlockArrangement_ReturnsFalse()
+        {
+            // T 形 4 格，用两块横向 2 格（共 4 格）永远铺不满 → 必须判定不可解
+            var remaining = new List<Vector2Int>
+            {
+                new Vector2Int(0, 0), new Vector2Int(0, 1), new Vector2Int(0, 2), new Vector2Int(1, 1)
+            };
+            var pieces = new List<List<Vector2Int>>
+            {
+                new List<Vector2Int> { new Vector2Int(0, 0), new Vector2Int(0, 1) },
+                new List<Vector2Int> { new Vector2Int(0, 0), new Vector2Int(0, 1) }
+            };
+            Assert.IsFalse(ShapeCutter.CanTile(remaining, pieces), "T 形无法被两块横条铺满");
+        }
+
+        [Test]
+        public void CanTile_CountMismatch_ReturnsFalse()
+        {
+            var remaining = new List<Vector2Int>
+            {
+                new Vector2Int(0, 0), new Vector2Int(0, 1), new Vector2Int(1, 0)
+            };
+            var pieces = new List<List<Vector2Int>>
+            {
+                new List<Vector2Int> { new Vector2Int(0, 0), new Vector2Int(0, 1) }
+            };
+            Assert.IsFalse(ShapeCutter.CanTile(remaining, pieces), "格子数与块格数不一致必须判 false");
+        }
+
+        [Test]
+        public void CanTile_RotationAllowsFit_ReturnsTrue()
+        {
+            // 剩余是竖 2 格，块的基础形状是横 2 格；允许旋转时应当可解
+            var remaining = new List<Vector2Int>
+            {
+                new Vector2Int(0, 0), new Vector2Int(1, 0)
+            };
+            var pieces = new List<List<Vector2Int>>
+            {
+                new List<Vector2Int> { new Vector2Int(0, 0), new Vector2Int(0, 1) }
+            };
+            Assert.IsTrue(ShapeCutter.CanTile(remaining, pieces), "横条旋转 90° 后应能铺满竖洞");
+        }
     }
 }
