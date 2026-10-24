@@ -71,5 +71,40 @@ namespace MendingtheSky.Tests
             hole.NotifyCellUnfilled();
             Assert.AreEqual(0, hole.GetNowCellCount());
         }
+
+        [Test]
+        public void GetQiReward_SumsPlacedPieceValues_AndRemovalUpdates()
+        {
+            var typeA = ScriptableObject.CreateInstance<LingShiTypeConfig>();
+            typeA.qiValue = 2f;
+            var typeB = ScriptableObject.CreateInstance<LingShiTypeConfig>();
+            typeB.qiValue = 3f;
+
+            var goA = new GameObject("PieceA");
+            var lsA = goA.AddComponent<LingShi>();
+            var shapeA = new LingShiShape();
+            shapeA.Init(new List<Vector2Int> { Vector2Int.zero });
+            lsA.Init(typeA, shapeA, Vector3.zero, 1f, 1f);
+
+            var goB = new GameObject("PieceB");
+            var lsB = goB.AddComponent<LingShi>();
+            var shapeB = new LingShiShape();
+            shapeB.Init(new List<Vector2Int> { Vector2Int.zero });
+            lsB.Init(typeB, shapeB, Vector3.zero, 1f, 1f);
+
+            var hole = new Hole();
+            hole.Init(1, new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+            hole.AddLingShi(lsA);
+            hole.AddLingShi(lsB);
+            Assert.AreEqual(5f, hole.GetQiReward(), 0.001f, "返还 = 两块灵石 qiValue 之和");
+
+            hole.RemoveLingShi(lsA);
+            Assert.AreEqual(3f, hole.GetQiReward(), 0.001f, "取下后返还值应减少");
+
+            Object.DestroyImmediate(goA);
+            Object.DestroyImmediate(goB);
+            Object.DestroyImmediate(typeA);
+            Object.DestroyImmediate(typeB);
+        }
     }
 }

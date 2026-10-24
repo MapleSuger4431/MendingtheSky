@@ -4,9 +4,8 @@ using UnityEngine;
 namespace MendingtheSky
 {
     /// <summary>
-    /// 纯 C# 类：一个洞口（一组四连通的格子 + 边界边 + 填充进度）。
-    /// 阶段 1 范围：cells / boundaryEdges / IsFull / MergeWith / 闭合标记接口。
-    /// placedLingShi（灵石持有）与 GetQiReward 在阶段 3/4 接入。
+    /// 纯 C# 类：一个洞口（一组四连通的格子 + 边界边 + 填充进度 + 已放置灵石的登记）。
+    /// 阶段 5 起维护 placedLingShi：洞口闭合时据此计算灵气返还并销毁灵石。
     /// cell 坐标约定：x = row，y = col。
     /// </summary>
     public class Hole
@@ -17,12 +16,16 @@ namespace MendingtheSky
         private int nowCellCount;
         private bool isClosing;
 
+        /// <summary>放置在本洞上的灵石（由 GridManager.FillCells/UnfillCells 维护）。</summary>
+        private readonly List<LingShi> placedLingShi = new List<LingShi>();
+
         public void Init(int holeId, List<Vector2Int> cells)
         {
             this.holeId = holeId;
             this.cells = new List<Vector2Int>(cells);
             nowCellCount = 0;
             isClosing = false;
+            placedLingShi.Clear();
             CalculateBoundaryEdges();
         }
 
@@ -41,6 +44,14 @@ namespace MendingtheSky
                 }
             }
             nowCellCount += other.nowCellCount;
+            // 正常流程只有未填洞参与合并，这里保险起见把灵石登记也合并过来
+            foreach (LingShi ls in other.placedLingShi)
+            {
+                if (ls != null && !placedLingShi.Contains(ls))
+                {
+                    placedLingShi.Add(ls);
+                }
+            }
             CalculateBoundaryEdges();
         }
 
@@ -82,6 +93,44 @@ namespace MendingtheSky
         public void NotifyCellUnfilled()
         {
             nowCellCount = Mathf.Max(0, nowCellCount - 1);
+        }
+
+        /// <summary>登记一块放到本洞上的灵石（同一块不会重复登记）。</summary>
+        public void AddLingShi(LingShi ls)
+        {
+            if (ls != null && !placedLingShi.Contains(ls))
+            {
+                placedLingShi.Add(ls);
+            }
+        }
+
+        /// <summary>取消登记（玩家从工作台取下该块时调用）。</summary>
+        public void RemoveLingShi(LingShi ls)
+        {
+            placedLingShi.Remove(ls);
+        }
+
+        /// <summary>返回本洞已放置灵石的副本。</summary>
+        public List<LingShi> GetPlacedLingShi()
+        {
+            return new List<LingShi>(placedLingShi);
+        }
+
+        /// <summary>
+        /// 灵气返还 = 本洞所有灵石的 qiValue 之和（按种类配置）。
+        /// 在 FinishHoleClosing 时调用，此时灵石尚未销毁。
+        /// </summary>
+        public float GetQiReward()
+        {
+            float reward = 0f;
+            foreach (LingShi ls in placedLingShi)
+            {
+                if (ls != null && ls.GetTypeConfig() != null)
+                {
+                    reward += ls.GetTypeConfig().GetQiValue();
+                }
+            }
+            return reward;
         }
 
         public void StartClosing()

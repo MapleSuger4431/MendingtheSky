@@ -45,6 +45,7 @@ namespace MendingtheSky
         [Header("阶段 5 接线（可为空；为空时逻辑照常运行，便于 EditMode 测试）")]
         [SerializeField] private GridVisual gridVisual;
         [SerializeField] private InventoryManager inventoryManager;
+        [SerializeField] private GameManager gameManager;
 
         public void GenerateLevel(LevelConfig levelConfig)
         {
@@ -527,8 +528,8 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 放置灵石：按锚点把形状覆盖的所有格置为已填（grid=1），并通知所属洞填充进度。
-        /// 阶段 5 将在此触发 CheckHoleClosed → MarkHoleClosing。
+        /// 放置灵石：按锚点把形状覆盖的所有格置为已填（grid=1），通知所属洞填充进度，
+        /// 登记灵石（用于闭合时返还灵气），并在洞满时触发闭合流程。
         /// </summary>
         public void FillCells(LingShi ls, int targetRow, int targetCol)
         {
@@ -537,6 +538,7 @@ namespace MendingtheSky
                 return;
             }
             var placed = new List<Vector2Int>();
+            Hole targetHole = null;
             foreach (Vector2Int cell in ls.GetCurrentCells())
             {
                 int r = targetRow + cell.x;
@@ -548,12 +550,21 @@ namespace MendingtheSky
                 Hole hole = GetHoleAt(r, c);
                 grid[r, c] = CellFilled;
                 hole?.NotifyCellFilled();
+                if (targetHole == null)
+                {
+                    targetHole = hole;
+                }
                 placed.Add(new Vector2Int(r, c));
             }
             ls.MarkPlaced(placed);
+            if (targetHole != null)
+            {
+                targetHole.AddLingShi(ls);
+                CheckHoleClosed(targetHole);
+            }
         }
 
-        /// <summary>从网格取下灵石：已填格恢复为缺口（grid=0），并回退洞的填充进度。</summary>
+        /// <summary>从网格取下灵石：已填格恢复为缺口（grid=0），回退洞的填充进度并取消登记。</summary>
         public void UnfillCells(LingShi ls)
         {
             if (ls == null)
@@ -572,7 +583,103 @@ namespace MendingtheSky
                 }
                 Hole hole = GetHoleAt(cell.x, cell.y);
                 hole?.NotifyCellUnfilled();
+                hole?.RemoveLingShi(ls);
                 grid[cell.x, cell.y] = CellHole;
+            }
+        }
+
+        /// <summary>洞口是否已填满：满且未在闭合中 → 触发 MarkHoleClosing。</summary>
+        public void CheckHoleClosed(Hole hole)
+        {
+            if (hole == null || hole.IsClosing() || !hole.IsFull())
+            {
+                return;
+            }
+            MarkHoleClosing(hole);
+        }
+
+        /// <summary>
+        /// 闭合开始：洞内格子标记为 2（闭合中，停止灵气消耗）、锁定所有灵石，
+        /// 然后播放淡出动画；动画结束回调 FinishHoleClosing。
+        /// 没有 GridVisual（EditMode 测试）时直接结算，便于纯逻辑测试。
+        /// </summary>
+        public void MarkHoleClosing(Hole hole)
+        {
+            if (hole == null)
+            {
+                return;
+            }
+            foreach (Vector2Int cell in hole.GetCells())
+            {
+                if (IsInside(cell.x, cell.y))
+                {
+                    grid[cell.x, cell.y] = CellClosing;
+                }
+            }
+            hole.StartClosing();
+            foreach (LingShi ls in hole.GetPlacedLingShi())
+            {
+                if (ls != null)
+                {
+                    ls.DisableInteraction();
+                }
+            }
+            if (gridVisual != null)
+            {
+                gridVisual.PlayClosingAnimation(hole, () => FinishHoleClosing(hole));
+            }
+            else
+            {
+                FinishHoleClosing(hole);
+            }
+        }
+
+        /// <summary>
+        /// 闭合结算：计算灵气返还 → 销毁灵石 → 格子恢复为正常(-1) → 移除洞 →
+        /// 通知 GameManager（加灵气、累计洞数、检查胜利）。
+        /// </summary>
+        public void FinishHoleClosing(Hole hole)
+        {
+            if (hole == null)
+            {
+                return;
+            }
+            float qiReward = hole.GetQiReward();
+            foreach (LingShi ls in hole.GetPlacedLingShi())
+            {
+                if (ls == null)
+                {
+                    continue;
+                }
+                if (inventoryManager != null)
+                {
+                    inventoryManager.RemoveLingShi(ls);
+                }
+                if (Application.isPlaying)
+                {
+                    Destroy(ls.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(ls.gameObject);
+                }
+            }
+            foreach (Vector2Int cell in hole.GetCells())
+            {
+                if (IsInside(cell.x, cell.y))
+                {
+                    grid[cell.x, cell.y] = CellNormal;
+                }
+            }
+            hole.FinishClosing();
+            RemoveHole(hole);
+            if (gridVisual != null)
+            {
+                gridVisual.RefreshAll(); // 清掉闭合格子的渲染实例
+            }
+            if (gameManager != null)
+            {
+                gameManager.OnHoleClosed(hole, qiReward);
             }
         }
 

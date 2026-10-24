@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -54,6 +55,10 @@ namespace MendingtheSky
         [SerializeField] private Color previewInvalidColor = new Color(1f, 0.35f, 0.35f, 0.55f);
         [SerializeField] private Color previewWrongHoleColor = new Color(1f, 0.75f, 0.25f, 0.55f);
         [SerializeField] private int previewSortingOrder = 4;
+
+        [Header("洞口闭合淡出动画（阶段 5）")]
+        [Tooltip("闭合动画时长（秒）；暂停时 Time.deltaTime=0，动画自动冻结")]
+        [SerializeField] private float closingDuration = 1f;
 
         private readonly List<GameObject> previewInstances = new List<GameObject>();
 
@@ -172,6 +177,61 @@ namespace MendingtheSky
                 }
             }
             previewInstances.Clear();
+        }
+
+        /// <summary>
+        /// 洞口闭合淡出动画（阶段 5）：洞格特效与已放置灵石一起渐隐，结束后回调 onComplete。
+        /// 使用 Time.deltaTime 累加——暂停（timeScale=0）时自动冻结，符合设计文档要求。
+        /// </summary>
+        public void PlayClosingAnimation(Hole hole, System.Action onComplete)
+        {
+            StartCoroutine(ClosingRoutine(hole, onComplete));
+        }
+
+        private IEnumerator ClosingRoutine(Hole hole, System.Action onComplete)
+        {
+            var stoneRenderers = new List<SpriteRenderer>();
+            foreach (LingShi ls in hole.GetPlacedLingShi())
+            {
+                if (ls != null)
+                {
+                    stoneRenderers.AddRange(ls.GetComponentsInChildren<SpriteRenderer>());
+                }
+            }
+
+            float t = 0f;
+            while (t < closingDuration)
+            {
+                t += Time.deltaTime; // 暂停时 deltaTime 为 0，循环自然冻结
+                float alpha = 1f - Mathf.Clamp01(t / Mathf.Max(0.0001f, closingDuration));
+
+                foreach (Vector2Int cell in hole.GetCells())
+                {
+                    if (holeCellInstances.TryGetValue(cell, out GameObject instance) && instance != null)
+                    {
+                        foreach (SpriteRenderer sr in instance.GetComponentsInChildren<SpriteRenderer>())
+                        {
+                            Color c = sr.color;
+                            c.a = alpha;
+                            sr.color = c;
+                        }
+                    }
+                }
+
+                foreach (SpriteRenderer sr in stoneRenderers)
+                {
+                    if (sr == null)
+                    {
+                        continue;
+                    }
+                    Color c = sr.color;
+                    c.a = alpha;
+                    sr.color = c;
+                }
+                yield return null;
+            }
+
+            onComplete?.Invoke();
         }
 
         private GameObject CreatePreviewCell(Vector2Int cell, Color color)

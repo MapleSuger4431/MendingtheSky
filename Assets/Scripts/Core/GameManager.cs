@@ -157,6 +157,11 @@ namespace MendingtheSky
         /// </summary>
         public void OnHoleClosed(Hole hole, float qiReward)
         {
+            // 只有进行中才结算；失败/胜利后到达的闭合回调直接忽略
+            if (state != GameState.Playing)
+            {
+                return;
+            }
             qiManager.AddQi(qiReward);
             filledHoleCount++;
             CheckWinCondition();
@@ -170,6 +175,10 @@ namespace MendingtheSky
                 return;
             }
             SetState(GameState.Lose);
+            if (dragController != null)
+            {
+                dragController.ResetAll(); // 手上/暂存的灵石复位，避免悬空
+            }
             uiManager.ShowLose(filledHoleCount, levelConfig != null ? levelConfig.GetTotalHoles() : 0);
         }
 
@@ -187,6 +196,10 @@ namespace MendingtheSky
             if (filledHoleCount >= levelConfig.GetTotalHoles())
             {
                 SetState(GameState.Win);
+                if (dragController != null)
+                {
+                    dragController.ResetAll();
+                }
                 uiManager.ShowWin(filledHoleCount, levelConfig.GetTotalHoles());
             }
         }
