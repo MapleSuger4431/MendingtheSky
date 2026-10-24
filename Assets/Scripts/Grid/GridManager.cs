@@ -42,6 +42,10 @@ namespace MendingtheSky
         private int nextHoleId = 1;
         private System.Random random;
 
+        [Header("阶段 5 接线（可为空；为空时逻辑照常运行，便于 EditMode 测试）")]
+        [SerializeField] private GridVisual gridVisual;
+        [SerializeField] private InventoryManager inventoryManager;
+
         public void GenerateLevel(LevelConfig levelConfig)
         {
             this.levelConfig = levelConfig;
@@ -99,7 +103,11 @@ namespace MendingtheSky
             if (newHole != null)
             {
                 generatedHoleCount++;
-                // 阶段 2：inventoryManager.AddLingShiFromHole(newHole, levelConfig);
+                // 动态补洞后立刻发放灵石（阶段 5：由 GridManager 直接通知背篓）
+                if (inventoryManager != null)
+                {
+                    inventoryManager.AddLingShiFromHole(newHole, levelConfig);
+                }
             }
         }
 

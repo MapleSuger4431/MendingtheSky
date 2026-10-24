@@ -28,6 +28,9 @@ namespace MendingtheSky
         [SerializeField] private bool isWarning;
         [SerializeField] private bool isEmpty;
 
+        [Header("调试（运行时可关闭消耗，便于测试）")]
+        [SerializeField] private bool consumptionEnabled = true;
+
         /// <summary>低灵气警告阈值：写死 0.2（设计决策：原型阶段不做配置）。</summary>
         public const float WarningRatio = 0.2f;
 
@@ -61,7 +64,8 @@ namespace MendingtheSky
         /// </summary>
         public void Tick(float dt)
         {
-            if (isEmpty || gridManager == null)
+            // consumptionEnabled 为 false 时暂停扣费（调试用，便于从容测试）
+            if (!consumptionEnabled || isEmpty || gridManager == null)
             {
                 return;
             }
@@ -121,6 +125,15 @@ namespace MendingtheSky
         public float GetQiPerCellPerSecond() { return qiPerCellPerSecond; }
         public bool IsWarning() { return isWarning; }
         public bool IsEmpty() { return isEmpty; }
+
+        /// <summary>灵气消耗是否开启（调试开关，由 DebugCheats 的 T 键切换）。</summary>
+        public bool IsConsumptionEnabled() { return consumptionEnabled; }
+
+        /// <summary>开启/关闭灵气消耗。关闭时 Tick 不再扣费，但返还/加灵气仍可用。</summary>
+        public void SetConsumptionEnabled(bool enabled)
+        {
+            consumptionEnabled = enabled;
+        }
 
         /// <summary>当前比例（0~1），供 UI 的 fillAmount 使用。</summary>
         public float GetRatio()

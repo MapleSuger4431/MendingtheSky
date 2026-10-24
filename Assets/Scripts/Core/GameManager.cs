@@ -196,6 +196,9 @@ namespace MendingtheSky
         public bool IsPaused() { return state == GameState.Paused; }
         public int GetFilledHoleCount() { return filledHoleCount; }
 
+        /// <summary>当前关卡配置（调试快捷键 / 动态补洞发石需要）。</summary>
+        public LevelConfig GetLevelConfig() { return levelConfig; }
+
         private void SetState(GameState newState)
         {
             state = newState;
