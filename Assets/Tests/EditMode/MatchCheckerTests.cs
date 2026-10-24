@@ -161,5 +161,19 @@ namespace MendingtheSky.Tests
             Assert.IsTrue(hole.IsFull());
             Assert.AreEqual(0, gridManager.GetUnfilledCellCount());
         }
+
+        [Test]
+        public void CanPlace_RedundantPiece_WithoutSourceHole_True()
+        {
+            // 冗余灵石 sourceHoleId = -1（无来源洞绑定）：形状匹配且同洞即可放
+            List<Hole> holes = gridManager.GetAllHoles();
+            Assert.GreaterOrEqual(holes.Count, 1);
+            Hole target = holes[0];
+            List<Vector2Int> pair = FindAdjacentPair(target);
+            Assert.IsNotNull(pair);
+            LingShi redundant = CreatePiece(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, -1);
+            Assert.IsTrue(MatchChecker.CanPlace(redundant, pair[0].x, pair[0].y, gridManager),
+                "冗余灵石没有来源洞绑定，形状匹配即应判可放");
+        }
     }
 }

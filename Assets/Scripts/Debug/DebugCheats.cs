@@ -10,6 +10,7 @@ namespace MendingtheSky
     /// - K：整个网格变成一个大洞（渲染/性能测试）
     /// - L：重开关卡
     /// - I：重新生成背篓初始灵石
+    /// - H：把鼠标所指洞口里已放置的灵石全部取下并放回背篓（纠正误放/死局）
     /// </summary>
     public class DebugCheats : MonoBehaviour
     {
@@ -77,6 +78,37 @@ namespace MendingtheSky
             {
                 inventoryManager.GenerateInitialInventory(gameManager.GetLevelConfig(), gridManager);
                 Debug.Log("[Cheats] 背篓灵石已重发");
+            }
+
+            // H：取下鼠标所指洞口的全部已放置灵石（自由放置可能造成死局，用于手动修正）
+            if (gridManager != null && inventoryManager != null && Input.GetKeyDown(KeyCode.H))
+            {
+                var cam = Camera.main;
+                if (cam != null)
+                {
+                    Vector3 world = cam.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y,
+                        Mathf.Abs(cam.transform.position.z)));
+                    Vector2Int cell = gridManager.WorldToGrid(world);
+                    Hole hole = gridManager.GetHoleAt(cell.x, cell.y);
+                    if (hole != null)
+                    {
+                        int count = 0;
+                        foreach (LingShi ls in inventoryManager.GetAll())
+                        {
+                            if (ls == null || ls.GetState() != LingShiState.Placed) continue;
+                            if (ls.GetSourceHoleId() != hole.GetHoleId()) continue;
+                            gridManager.UnfillCells(ls);
+                            ls.SetState(LingShiState.Cooked);
+                            inventoryManager.ReturnToBasket(ls);
+                            count++;
+                        }
+                        Debug.Log($"[Cheats] 已取下洞#{hole.GetHoleId()} 的 {count} 块灵石");
+                    }
+                    else
+                    {
+                        Debug.Log("[Cheats] 鼠标下没有洞口");
+                    }
+                }
             }
         }
     }

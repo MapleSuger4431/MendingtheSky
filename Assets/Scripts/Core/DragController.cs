@@ -7,6 +7,13 @@ namespace MendingtheSky
     /// <summary>
     /// 拖拽控制器（阶段 3）：拾取 → 拖动（滚轮/R 旋转）→ 放置/回背篓/暂存。
     /// 拾取方案 A：只检测灵石碰撞体（Physics2D.OverlapPointAll），取排序最上层。
+    ///
+    /// 放置判定与预览颜色（2026-10-24 用户确认）：
+    ///   🟢 绿色 = 可放置：形状覆盖的都是缺口格、且属于同一个洞、来源洞校验通过；
+    ///   🟠 橙色 = 形状匹配且同洞，但不是切出它的洞（来源洞绑定生效）；
+    ///       冗余灵石 sourceHoleId = -1，没有绑定，能放就是绿色；
+    ///   🔴 红色 = 不可放：越界 / 非缺口格 / 跨洞 / 未煮熟。
+    /// 不再用“可能导致洞口拼不满”作为拒绝条件（自由放置优先，拼错可点选取下重摆）。
     /// OnMouseUp 判定优先级（评审 P0-4）：
     ///   ① 锅区（阶段 4 接入 PotManager）→ 现阶段跳过
     ///   ② 网格匹配 → 放置
@@ -41,10 +48,6 @@ namespace MendingtheSky
         private bool isDragging;
         private Vector3 dragOffset;
         private Camera cam;
-
-        // 可解性缓存：只在「目标洞 + 锚点 + 旋转」变化时重新求解，避免每帧跑搜索
-        private string lastSolveKey = string.Empty;
-        private bool lastSolveResult = true;
 
         public bool IsDragging() { return isDragging; }
 
@@ -115,7 +118,6 @@ namespace MendingtheSky
             draggingLingShi = ls;
             isDragging = true;
             dragOffset = ls.transform.position - mouseWorld;
-            lastSolveKey = string.Empty; // 每次开始拖拽清空可解性缓存
             // 用 Kinematic 而不是 simulated=false：后者会让 Collider 退出物理查询，
             // 导致已放置/暂存的灵石之后无法再被拾取
             ls.SetPhysicsBodyType(RigidbodyType2D.Kinematic);
@@ -165,19 +167,14 @@ namespace MendingtheSky
                 Hole targetHole = MatchChecker.GetMatchedHole(ls, anchor.x, anchor.y, gridManager);
                 if (targetHole != null)
                 {
-                    List<Vector2Int> targetCells = MatchChecker.GetMatchedCells(ls, anchor.x, anchor.y, gridManager);
-                    if (WouldKeepHoleSolvable(ls, anchor, targetCells))
-                    {
-                        lastSolveKey = string.Empty; // 局面变化，缓存失效
-                        gridManager.FillCells(ls, anchor.x, anchor.y);
-                        ls.SetTransparent(false);
-                        ls.SetTargetScale(1f);
-                        StartCoroutine(SnapToCell(ls, anchor));
-                        EndDrag();
-                        return;
-                    }
-                    // 形状能放但会导致本洞无法拼满：拒绝放置，落到下面的暂存/回篓分支
-                    Debug.Log("[DragController] 该落点会导致洞口无法拼满，放置被拒绝");
+                    // 2026-10-24 用户反馈：完全按「形状 + 同洞 + 来源洞」判定放置，
+                    // 不再因“可能导致该洞无法拼满”拒绝——自由放置优先，拼错可点选取下重摆。
+                    gridManager.FillCells(ls, anchor.x, anchor.y);
+                    ls.SetTransparent(false);
+                    ls.SetTargetScale(1f);
+                    StartCoroutine(SnapToCell(ls, anchor));
+                    EndDrag();
+                    return;
                 }
             }
 
@@ -258,83 +255,7 @@ namespace MendingtheSky
             List<Vector2Int> cells = MatchChecker.GetMatchedCells(draggingLingShi, anchor.x, anchor.y, gridManager);
             bool valid = MatchChecker.CanPlace(draggingLingShi, anchor.x, anchor.y, gridManager);
             bool wrongHole = !valid && MatchChecker.IsShapeFitsOtherHole(draggingLingShi, anchor.x, anchor.y, gridManager);
-            if (valid)
-            {
-                // 死锁防护：即使形状能放，也不允许放完后本洞再也拼不满的位置
-                valid = WouldKeepHoleSolvable(draggingLingShi, anchor, cells);
-            }
             gridVisual.ShowPreview(cells, valid, wrongHole);
-        }
-
-        /// <summary>
-        /// 放置前的可解性校验（死锁防护）：
-        /// 除被拖拽的这块外，本洞「其余未放置的灵石」必须恰好能铺满「剩余缺口格」。
-        /// 这样无论玩家把棋子放在哪个被允许的位置，洞口都保证还能拼满，
-        /// 不会出现"形状明明还能放，但剩余块怎么摆都填不满"的死局。
-        /// 结果按「洞 + 锚点 + 旋转步数」缓存，拖动时只在位置变化时重新求解。
-        /// </summary>
-        private bool WouldKeepHoleSolvable(LingShi dragging, Vector2Int anchor, List<Vector2Int> targetCells)
-        {
-            Hole hole = gridManager.GetHoleAt(anchor.x, anchor.y);
-            if (hole == null)
-            {
-                return false;
-            }
-            string key = $"{hole.GetHoleId()}_{anchor.x}_{anchor.y}_{dragging.GetRotationSteps()}";
-            if (key == lastSolveKey)
-            {
-                return lastSolveResult;
-            }
-            lastSolveKey = key;
-
-            // 1) 剩余缺口格 = 洞内所有未填格 - 本次放置覆盖的格
-            var remaining = new List<Vector2Int>();
-            foreach (Vector2Int cell in hole.GetCells())
-            {
-                if (gridManager.GetCell(cell.x, cell.y) == GridManager.CellHole)
-                {
-                    remaining.Add(cell);
-                }
-            }
-            foreach (Vector2Int cell in targetCells)
-            {
-                remaining.Remove(cell);
-            }
-
-            // 2) 本洞其余未放置的灵石：背篓 + 锅 + 暂存，排除正在拖拽的这块
-            var pieces = new List<List<Vector2Int>>();
-            CollectSolvablePieces(inventoryManager != null ? inventoryManager.GetAll() : null, dragging, hole, pieces);
-            CollectSolvablePieces(potManager != null ? potManager.GetAllPieces() : null, dragging, hole, pieces);
-            CollectSolvablePieces(stashedLingShi, dragging, hole, pieces);
-
-            lastSolveResult = ShapeCutter.CanTile(remaining, pieces);
-            return lastSolveResult;
-        }
-
-        /// <summary>从来源列表收集属于该洞、尚未放置的灵石形状（基础格，求解器会尝试旋转）。</summary>
-        private static void CollectSolvablePieces(List<LingShi> source, LingShi dragging, Hole hole,
-            List<List<Vector2Int>> pieces)
-        {
-            if (source == null)
-            {
-                return;
-            }
-            foreach (LingShi ls in source)
-            {
-                if (ls == null || ls == dragging)
-                {
-                    continue;
-                }
-                if (ls.GetSourceHoleId() != hole.GetHoleId())
-                {
-                    continue;
-                }
-                if (ls.GetState() != LingShiState.InBasket && ls.GetState() != LingShiState.Cooked)
-                {
-                    continue;
-                }
-                pieces.Add(ls.GetBaseCells());
-            }
         }
 
         private void ClearPreview()
