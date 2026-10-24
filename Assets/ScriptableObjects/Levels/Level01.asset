@@ -32,8 +32,8 @@ MonoBehaviour:
   maxHoleCols: 6
   mergeChance: 0.3
   holeSpawnInterval: 5
-  initialQi: 100
-  qiPerCellPerSecond: 0.1
+  initialQi: 120
+  qiPerCellPerSecond: 0.04
   redundantCount: 2
   redundantThreshold: 4
   potMaxCount: 3
