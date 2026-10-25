@@ -205,17 +205,6 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>
-        /// 洞口已填满但形状组合不符：把「还缺什么形状」的提示显示到 HUD。
-        /// </summary>
-        public void OnHoleShapeMismatch(string message)
-        {
-            if (uiManager != null)
-            {
-                uiManager.ShowStatus(message);
-            }
-        }
-
         public GameState GetState() { return state; }
         public bool IsPlaying() { return state == GameState.Playing; }
         public bool IsPaused() { return state == GameState.Paused; }

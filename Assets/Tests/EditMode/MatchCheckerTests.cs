@@ -181,7 +181,7 @@ namespace MendingtheSky.Tests
         public void CanPlace_FreePlacement_IgnoresShapeList()
         {
             // 2026-10-25 用户确认：放置阶段不做清单限制，几何贴合即可放；
-            // 清单只在洞口填满、准备愈合时校验（见 HoleTests.MatchesPlacedShapes）。
+            // 清单只影响「预览颜色」（MatchChecker.GetPreviewHint）与「填满后是否愈合」。
             Hole hole = gridManager.GetAllHoles()[0];
             List<Vector2Int> pair = FindAdjacentPair(hole);
             hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
@@ -189,6 +189,45 @@ namespace MendingtheSky.Tests
             LingShi single = CreatePiece(new List<Vector2Int> { Vector2Int.zero });
             Assert.IsTrue(MatchChecker.CanPlace(single, pair[0].x, pair[0].y, gridManager),
                 "即使清单里没有单格形状，几何可贴合就允许放置");
+        }
+
+        [Test]
+        public void GetPreviewHint_ListHasQuota_ReturnsValid()
+        {
+            Hole hole = gridManager.GetAllHoles()[0];
+            List<Vector2Int> pair = FindAdjacentPair(hole);
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+            LingShi piece = CreatePiece(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) },
+                hole.GetHoleId());
+            Assert.AreEqual(PreviewHint.Valid,
+                MatchChecker.GetPreviewHint(piece, pair[0].x, pair[0].y, gridManager),
+                "清单里还有这个形状的额度 → 绿色");
+        }
+
+        [Test]
+        public void GetPreviewHint_ShapeNotInList_ReturnsShapeNotInHole()
+        {
+            Hole hole = gridManager.GetAllHoles()[0];
+            List<Vector2Int> pair = FindAdjacentPair(hole);
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero }); // 清单里只有单格
+            LingShi piece = CreatePiece(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) },
+                hole.GetHoleId());
+            Assert.AreEqual(PreviewHint.ShapeNotInHole,
+                MatchChecker.GetPreviewHint(piece, pair[0].x, pair[0].y, gridManager),
+                "几何可放但清单里没有这个形状 → 黄色");
+            Assert.IsTrue(MatchChecker.CanPlace(piece, pair[0].x, pair[0].y, gridManager),
+                "黄色只是警告，仍然允许放下（自由放置优先）");
+        }
+
+        [Test]
+        public void GetPreviewHint_NotPlaceable_ReturnsInvalid()
+        {
+            Hole hole = gridManager.GetAllHoles()[0];
+            LingShi piece = CreatePiece(new List<Vector2Int> { Vector2Int.zero }, hole.GetHoleId());
+            var normal = new Vector2Int(0, 0);
+            Assert.IsFalse(hole.IsCellInHole(normal.x, normal.y), "假设 (0,0) 不在洞内");
+            Assert.AreEqual(PreviewHint.Invalid,
+                MatchChecker.GetPreviewHint(piece, normal.x, normal.y, gridManager));
         }
     }
 }

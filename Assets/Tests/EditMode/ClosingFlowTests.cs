@@ -62,13 +62,14 @@ namespace MendingtheSky.Tests
             cleanup.Clear();
         }
 
-        private LingShi CreateMonomino()
+        private LingShi CreateMonomino(int sourceHoleId = -1)
         {
             var go = new GameObject("Monomino_ClosingTest");
             var ls = go.AddComponent<LingShi>();
             var shape = new LingShiShape();
             shape.Init(new List<Vector2Int> { Vector2Int.zero });
             ls.Init(typeConfig, shape, Vector3.zero, 1f, 1f);
+            ls.SetSourceHoleId(sourceHoleId);
             ls.SetState(LingShiState.Cooked);
             return ls;
         }
@@ -113,12 +114,12 @@ namespace MendingtheSky.Tests
             // 洞满但形状组合不符合需求清单 → 不愈合（保留现场供玩家重摆）
             Hole hole = grid.GetAllHoles()[0];
             var cells = hole.GetCells();
-            // 需求清单登记为「一块 domino」，但玩家用单格填满
+            // 需求清单登记为「一块 domino」，但玩家用本洞切出的单格填满
             hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
 
             foreach (Vector2Int cell in cells)
             {
-                grid.FillCells(CreateMonomino(), cell.x, cell.y);
+                grid.FillCells(CreateMonomino(hole.GetHoleId()), cell.x, cell.y);
             }
 
             Assert.IsTrue(hole.IsFull());
@@ -127,11 +128,29 @@ namespace MendingtheSky.Tests
         }
 
         [Test]
-        public void FullWithMatchingShapes_Heals()
+        public void FullWithRedundantPieces_IgnoresShapeList()
         {
-            // 需求清单与放置形状一致 → 正常愈合
+            // 冗余灵石（sourceHoleId == -1）不参与形状校验：全部用冗余单格填满也应愈合
             Hole hole = grid.GetAllHoles()[0];
             var cells = hole.GetCells();
+            int holeId = hole.GetHoleId();
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+
+            foreach (Vector2Int cell in cells)
+            {
+                grid.FillCells(CreateMonomino(-1), cell.x, cell.y);
+            }
+
+            Assert.IsNull(grid.GetHoleById(holeId), "冗余灵石不占清单额度，填满即愈合");
+        }
+
+        [Test]
+        public void FullWithMatchingShapes_Heals()
+        {
+            // 需求清单与放置形状一致 → 正常愈合（用本洞切出的灵石，走完整形状校验）
+            Hole hole = grid.GetAllHoles()[0];
+            var cells = hole.GetCells();
+            int holeId = hole.GetHoleId();
             foreach (Vector2Int _ in cells)
             {
                 hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero });
@@ -139,7 +158,7 @@ namespace MendingtheSky.Tests
 
             foreach (Vector2Int cell in cells)
             {
-                grid.FillCells(CreateMonomino(), cell.x, cell.y);
+                grid.FillCells(CreateMonomino(holeId), cell.x, cell.y);
             }
 
             Assert.IsNull(grid.GetHoleById(hole.GetHoleId()), "形状一致时应愈合移除");

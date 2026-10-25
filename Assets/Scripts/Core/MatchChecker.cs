@@ -7,7 +7,7 @@ namespace MendingtheSky
     /// 放置匹配检查（静态工具）：
     /// 形状覆盖的所有格必须在网格内、都是缺口格（grid==0）、且属于同一个洞。
     /// 2026-10-25 用户确认：放置阶段不做形状清单限制（自由放置优先），
-    /// 形状清单只在洞口填满、准备愈合时校验（Hole.MatchesPlacedShapes）。
+    /// 形状清单只影响「预览颜色」和「洞口填满时是否愈合」（Hole.MatchesPlacedShapes）。
     /// 同形状灵石可互换，不校验来源洞。
     /// </summary>
     public static class MatchChecker
@@ -15,6 +15,30 @@ namespace MendingtheSky
         public static bool CanPlace(LingShi ls, int targetRow, int targetCol, GridManager gridManager)
         {
             return GetMatchedHole(ls, targetRow, targetCol, gridManager) != null;
+        }
+
+        /// <summary>
+        /// 拖拽预览三态：
+        /// 几何不可放 → Invalid（红）；
+        /// 几何可放且本洞清单还有这个形状的额度 → Valid（绿）；
+        /// 几何可放但清单里没有这个形状了 → ShapeNotInHole（黄，仍允许放下，只是提醒填满后不会愈合）。
+        /// 未登记清单的洞（测试/调试）一律 Valid。
+        /// </summary>
+        public static PreviewHint GetPreviewHint(LingShi ls, int targetRow, int targetCol,
+            GridManager gridManager)
+        {
+            Hole hole = GetMatchedHole(ls, targetRow, targetCol, gridManager);
+            if (hole == null)
+            {
+                return PreviewHint.Invalid;
+            }
+            if (!hole.HasShapeEntries())
+            {
+                return PreviewHint.Valid;
+            }
+            return hole.GetRemainingShapeQuota(ls.GetShapeSignature()) > 0
+                ? PreviewHint.Valid
+                : PreviewHint.ShapeNotInHole;
         }
 
         /// <summary>目标锚点覆盖的所有绝对格（无论是否可放都返回，用于预览高亮）。</summary>

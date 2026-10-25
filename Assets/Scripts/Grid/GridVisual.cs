@@ -53,7 +53,8 @@ namespace MendingtheSky
         [SerializeField] private Transform previewRoot;
         [SerializeField] private Color previewValidColor = new Color(0.4f, 1f, 0.55f, 0.55f);
         [SerializeField] private Color previewInvalidColor = new Color(1f, 0.35f, 0.35f, 0.55f);
-        [SerializeField] private Color previewWrongHoleColor = new Color(1f, 0.75f, 0.25f, 0.55f);
+        [Tooltip("黄色：几何能放，但本洞形状清单里没有这个形状（放下去填满也不会愈合）")]
+        [SerializeField] private Color previewShapeNotInHoleColor = new Color(1f, 0.82f, 0.3f, 0.55f);
         [SerializeField] private int previewSortingOrder = 4;
 
         [Header("洞口闭合淡出动画（阶段 5）")]
@@ -144,19 +145,30 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 放置预览：isValid=绿色；形状匹配但来源洞不符=橙色；其他无效=红色。
+        /// 放置预览（2026-10-25 三态）：绿色 = 可放且本洞清单还有该形状；
+        /// 黄色 = 可放但本洞清单里没有这个形状（放下去填满不会愈合）；红色 = 不可放。
         /// 越界格自动跳过。
         /// </summary>
-        public void ShowPreview(List<Vector2Int> cells, bool isValid, bool shapeFitsOtherHole = false)
+        public void ShowPreview(List<Vector2Int> cells, PreviewHint hint)
         {
             ClearPreview();
             if (cells == null || gridManager == null)
             {
                 return;
             }
-            Color color = isValid
-                ? previewValidColor
-                : (shapeFitsOtherHole ? previewWrongHoleColor : previewInvalidColor);
+            Color color;
+            switch (hint)
+            {
+                case PreviewHint.Valid:
+                    color = previewValidColor;
+                    break;
+                case PreviewHint.ShapeNotInHole:
+                    color = previewShapeNotInHoleColor;
+                    break;
+                default:
+                    color = previewInvalidColor;
+                    break;
+            }
             foreach (Vector2Int cell in cells)
             {
                 if (!gridManager.IsInside(cell.x, cell.y))

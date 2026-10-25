@@ -590,7 +590,7 @@ namespace MendingtheSky
 
         /// <summary>
         /// 洞口是否已填满：满且未闭合 → 校验「已放置灵石的形状组合」是否符合需求清单，
-        /// 符合才进入闭合（2026-10-25 用户设计：自由放置，愈合时判定）。
+        /// 符合才进入闭合（2026-10-25 用户设计：自由放置，愈合时判定；冗余灵石不参与校验）。
         /// </summary>
         public void CheckHoleClosed(Hole hole)
         {
@@ -600,28 +600,38 @@ namespace MendingtheSky
             }
             if (!hole.MatchesPlacedShapes())
             {
-                // 组装「还缺什么形状」提示（按名称聚合数量），HUD 与日志同时给出
-                var counts = new Dictionary<string, int>();
-                foreach (List<Vector2Int> entry in hole.GetMissingShapeEntries())
-                {
-                    string name = ShapeDescriber.Describe(entry);
-                    counts.TryGetValue(name, out int count);
-                    counts[name] = count + 1;
-                }
-                var parts = new List<string>();
-                foreach (var kv in counts)
-                {
-                    parts.Add(kv.Value > 1 ? $"{kv.Key}×{kv.Value}" : kv.Key);
-                }
-                string hint = parts.Count > 0 ? "洞口需要：" + string.Join("、", parts) : "洞口形状组合不符";
-                Debug.Log($"[GridManager] 洞口#{hole.GetHoleId()} 已填满，但形状组合不符（{hint}），暂不愈合");
-                if (gameManager != null)
-                {
-                    gameManager.OnHoleShapeMismatch(hint);
-                }
+                // 诊断日志（2026-10-25 用户要求：先只给 Debug，不走 HUD）：
+                // 洞内多出来的形状很可能就是其他洞口切出来的，提示玩家取下换回本洞形状。
+                string extra = DescribeShapeCounts(hole.GetUnexpectedShapeEntries());
+                string unused = DescribeShapeCounts(hole.GetMissingShapeEntries());
+                Debug.Log($"[GridManager] 洞口#{hole.GetHoleId()} 已填满，但形状清单不匹配" +
+                          $"（多出：{extra}；清单未用上：{unused}）。" +
+                          "该洞口可能有其他洞口所需要的形状，请取下换回本洞形状后再拼满");
                 return;
             }
             MarkHoleClosing(hole);
+        }
+
+        /// <summary>把一组形状按名称聚合成「U形×2、L形」这样的可读文本（诊断日志用）。</summary>
+        private static string DescribeShapeCounts(List<List<Vector2Int>> entries)
+        {
+            if (entries == null || entries.Count == 0)
+            {
+                return "无";
+            }
+            var counts = new Dictionary<string, int>();
+            foreach (List<Vector2Int> entry in entries)
+            {
+                string name = ShapeDescriber.Describe(entry);
+                counts.TryGetValue(name, out int count);
+                counts[name] = count + 1;
+            }
+            var parts = new List<string>();
+            foreach (KeyValuePair<string, int> kv in counts)
+            {
+                parts.Add(kv.Value > 1 ? $"{kv.Key}×{kv.Value}" : kv.Key);
+            }
+            return string.Join("、", parts);
         }
 
         /// <summary>
@@ -726,6 +736,8 @@ namespace MendingtheSky
         /// <summary>
         /// 灵气消耗基数：只统计 grid==0 的空缺格（已填、闭合中一律不扣）。
         /// 洞数量级小，按需遍历即可；若后续 profiling 发现问题再改缓存计数。
+        /// TODO（2026-10-25 暂定，用户确认先这样）：洞口「填满但形状清单不匹配」时格子是 grid==1，
+        /// 因此这个洞不再计入灵气消耗，玩家可以把洞填满卡住来冻结倒计时。当前保留该行为，后续若要收紧改这里。
         /// </summary>
         public int GetUnfilledCellCount()
         {

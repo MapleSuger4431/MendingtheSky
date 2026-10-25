@@ -121,6 +121,7 @@ namespace MendingtheSky.Tests
             var shape = new LingShiShape();
             shape.Init(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
             ls.Init(type, shape, Vector3.zero, 1f, 1f);
+            ls.SetSourceHoleId(1); // 本洞切出（sourceHoleId >= 0 才参与形状校验）
             hole.AddLingShi(ls);
             Assert.IsTrue(hole.MatchesPlacedShapes(), "形状一致时应通过");
 
@@ -129,14 +130,114 @@ namespace MendingtheSky.Tests
             var shape2 = new LingShiShape();
             shape2.Init(new List<Vector2Int> { Vector2Int.zero });
             ls2.Init(type, shape2, Vector3.zero, 1f, 1f);
+            ls2.SetSourceHoleId(1);
             hole.AddLingShi(ls2);
             Assert.IsFalse(hole.MatchesPlacedShapes(), "出现清单外形状应不通过");
+            Assert.AreEqual(1, hole.GetUnexpectedShapeEntries().Count, "单格形状应被识别为清单外形状");
 
             hole.RemoveLingShi(ls2);
             Assert.IsTrue(hole.MatchesPlacedShapes(), "移除清单外形状后应恢复通过");
 
             Object.DestroyImmediate(go);
             Object.DestroyImmediate(go2);
+            Object.DestroyImmediate(type);
+        }
+
+        [Test]
+        public void MatchesPlacedShapes_IgnoresRedundantPieces()
+        {
+            // 2026-10-25 定稿：冗余补给灵石（sourceHoleId == -1）没有来源洞，不参与形状校验
+            var hole = new Hole();
+            hole.Init(1, new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+
+            var type = ScriptableObject.CreateInstance<LingShiTypeConfig>();
+            var go = new GameObject("RedundantSingle");
+            var ls = go.AddComponent<LingShi>();
+            var shape = new LingShiShape();
+            shape.Init(new List<Vector2Int> { Vector2Int.zero }); // 清单里没有单格，但它是冗余块
+            ls.Init(type, shape, Vector3.zero, 1f, 1f);
+            ls.SetSourceHoleId(-1);
+            hole.AddLingShi(ls);
+
+            Assert.IsTrue(hole.MatchesPlacedShapes(), "冗余灵石不占清单额度，不应导致判定失败");
+            Assert.AreEqual(0, hole.GetUnexpectedShapeEntries().Count, "冗余灵石不算「多出的形状」");
+
+            Object.DestroyImmediate(go);
+            Object.DestroyImmediate(type);
+        }
+
+        [Test]
+        public void MatchesPlacedShapes_AllowsUnusedListEntries()
+        {
+            // 清单不要求被全部抵扣：冗余灵石占掉的格子，对应清单里没被用上的条目
+            var hole = new Hole();
+            hole.Init(1, new List<Vector2Int>
+            {
+                Vector2Int.zero, new Vector2Int(0, 1), new Vector2Int(0, 2)
+            });
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }); // 横二连
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero }); // 单格
+
+            var type = ScriptableObject.CreateInstance<LingShiTypeConfig>();
+
+            var goPair = new GameObject("OwnPair");
+            var ownPair = goPair.AddComponent<LingShi>();
+            var pairShape = new LingShiShape();
+            pairShape.Init(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+            ownPair.Init(type, pairShape, Vector3.zero, 1f, 1f);
+            ownPair.SetSourceHoleId(1);
+            hole.AddLingShi(ownPair);
+
+            var goMono = new GameObject("RedundantMono");
+            var redundantMono = goMono.AddComponent<LingShi>();
+            var monoShape = new LingShiShape();
+            monoShape.Init(new List<Vector2Int> { Vector2Int.zero });
+            redundantMono.Init(type, monoShape, Vector3.zero, 1f, 1f);
+            redundantMono.SetSourceHoleId(-1);
+            hole.AddLingShi(redundantMono);
+
+            Assert.IsTrue(hole.MatchesPlacedShapes(),
+                "清单的单格条目没被本洞灵石用上，但缺口由冗余灵石占着，应判定通过");
+
+            Object.DestroyImmediate(goPair);
+            Object.DestroyImmediate(goMono);
+            Object.DestroyImmediate(type);
+        }
+
+        [Test]
+        public void GetRemainingShapeQuota_CountsDownByOwnPiecesOnly()
+        {
+            var pair = new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) };
+            string signature = ShapeCutter.GetCanonicalSignature(pair);
+
+            var hole = new Hole();
+            hole.Init(1, new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+            hole.AddRequiredShapeEntry(pair);
+            Assert.AreEqual(1, hole.GetRemainingShapeQuota(signature), "还没放时应有 1 条额度");
+
+            var type = ScriptableObject.CreateInstance<LingShiTypeConfig>();
+
+            var goOwn = new GameObject("OwnPair");
+            var own = goOwn.AddComponent<LingShi>();
+            var ownShape = new LingShiShape();
+            ownShape.Init(pair);
+            own.Init(type, ownShape, Vector3.zero, 1f, 1f);
+            own.SetSourceHoleId(1);
+            hole.AddLingShi(own);
+            Assert.AreEqual(0, hole.GetRemainingShapeQuota(signature), "本洞同形状块抵扣后额度应为 0");
+
+            var goRedundant = new GameObject("RedundantMono");
+            var redundant = goRedundant.AddComponent<LingShi>();
+            var monoShape = new LingShiShape();
+            monoShape.Init(new List<Vector2Int> { Vector2Int.zero });
+            redundant.Init(type, monoShape, Vector3.zero, 1f, 1f);
+            redundant.SetSourceHoleId(-1);
+            hole.AddLingShi(redundant);
+            Assert.AreEqual(0, hole.GetRemainingShapeQuota(signature), "冗余灵石不占清单额度");
+
+            Object.DestroyImmediate(goOwn);
+            Object.DestroyImmediate(goRedundant);
             Object.DestroyImmediate(type);
         }
     }

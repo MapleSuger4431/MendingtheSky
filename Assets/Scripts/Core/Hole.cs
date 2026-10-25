@@ -20,10 +20,11 @@ namespace MendingtheSky
         private readonly List<LingShi> placedLingShi = new List<LingShi>();
 
         /// <summary>
-        /// 本洞的「需求形状清单」：生成洞时切出的灵石形状（每个条目对应一块必需灵石）。
-        /// 放置阶段不限制形状（自由放置）；只在洞口填满、准备愈合时校验
-        /// 「已放置灵石的形状多重集合」是否与清单一致（见 MatchesPlacedShapes）。
-        /// 未登记清单的洞（EditMode 测试/调试）默认通过。
+        /// 本洞的「需求形状清单」：生成洞时切出的灵石形状（每个条目对应一块切出的灵石）。
+        /// 放置阶段不限制形状（自由放置）；只在洞口填满时参与两件事：
+        /// 1) 拖拽预览颜色（清单里还有该形状 → 绿色，没有 → 黄色，见 MatchChecker.GetPreviewHint）；
+        /// 2) 愈合判定（Hole.MatchesPlacedShapes，冗余灵石不参与）。
+        /// 未登记清单的洞（EditMode 测试/调试）一律通过。
         /// </summary>
         private readonly List<List<Vector2Int>> requiredShapeEntries = new List<List<Vector2Int>>();
         private bool hasShapeEntries;
@@ -142,9 +143,18 @@ namespace MendingtheSky
             hasShapeEntries = true;
         }
 
+        /// <summary>本洞是否登记过形状清单（测试/调试洞可能没有）。</summary>
+        public bool HasShapeEntries()
+        {
+            return hasShapeEntries;
+        }
+
         /// <summary>
-        /// 愈合判定：洞内已放置灵石的形状多重集合是否与需求清单一致。
-        /// 同形状（旋转无关）可互换；数量必须一一对应。
+        /// 愈合判定（2026-10-25 定稿）：
+        /// 洞内每一块「非冗余」灵石的形状，都要能在清单里抵扣掉一条同签名（旋转无关）的条目。
+        /// - 冗余灵石（sourceHoleId == -1）没有来源洞，不参与校验；
+        /// - 不要求清单被全部抵扣：冗余灵石占掉的格子，对应的就是清单里没被用上的条目。
+        ///   洞格数 = 清单格数 = 已放格数，所以无冗余灵石时「每块都能抵扣」自动等价于「多重集合完全相等」。
         /// 未登记清单的洞（EditMode 测试/调试）默认通过。
         /// </summary>
         public bool MatchesPlacedShapes()
@@ -153,6 +163,80 @@ namespace MendingtheSky
             {
                 return true;
             }
+            var required = BuildRequiredCounts();
+            foreach (LingShi ls in placedLingShi)
+            {
+                if (ls == null || ls.GetSourceHoleId() < 0)
+                {
+                    continue; // 冗余补给灵石：不占清单额度
+                }
+                string sig = ls.GetShapeSignature();
+                if (!required.TryGetValue(sig, out int count) || count <= 0)
+                {
+                    return false; // 出现清单外的形状（很可能是别的洞切出来的）
+                }
+                required[sig] = count - 1;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 清单里还有几条这个形状没被洞内「非冗余」灵石抵扣（≤0 表示没有额度了）。
+        /// 拖拽预览据此区分绿色（还有额度，放下去有助于愈合）与黄色（清单里没有这个形状）。
+        /// </summary>
+        public int GetRemainingShapeQuota(string signature)
+        {
+            if (!hasShapeEntries || string.IsNullOrEmpty(signature))
+            {
+                return 0;
+            }
+            var remaining = BuildRequiredCounts();
+            foreach (LingShi ls in placedLingShi)
+            {
+                if (ls == null || ls.GetSourceHoleId() < 0)
+                {
+                    continue;
+                }
+                string sig = ls.GetShapeSignature();
+                if (remaining.TryGetValue(sig, out int count) && count > 0)
+                {
+                    remaining[sig] = count - 1;
+                }
+            }
+            return remaining.TryGetValue(signature, out int quota) ? Mathf.Max(0, quota) : 0;
+        }
+
+        /// <summary>
+        /// 洞内「清单里抵扣不到」的非冗余灵石形状（诊断用：这些很可能来自其他洞口）。
+        /// </summary>
+        public List<List<Vector2Int>> GetUnexpectedShapeEntries()
+        {
+            var unexpected = new List<List<Vector2Int>>();
+            if (!hasShapeEntries)
+            {
+                return unexpected;
+            }
+            var remaining = BuildRequiredCounts();
+            foreach (LingShi ls in placedLingShi)
+            {
+                if (ls == null || ls.GetSourceHoleId() < 0)
+                {
+                    continue;
+                }
+                string sig = ls.GetShapeSignature();
+                if (remaining.TryGetValue(sig, out int count) && count > 0)
+                {
+                    remaining[sig] = count - 1;
+                    continue;
+                }
+                unexpected.Add(ls.GetBaseCells());
+            }
+            return unexpected;
+        }
+
+        /// <summary>需求清单 → 形状签名计数表。</summary>
+        private Dictionary<string, int> BuildRequiredCounts()
+        {
             var required = new Dictionary<string, int>();
             foreach (List<Vector2Int> entry in requiredShapeEntries)
             {
@@ -160,27 +244,7 @@ namespace MendingtheSky
                 required.TryGetValue(sig, out int count);
                 required[sig] = count + 1;
             }
-            foreach (LingShi ls in placedLingShi)
-            {
-                if (ls == null)
-                {
-                    continue;
-                }
-                string sig = ls.GetShapeSignature();
-                if (!required.TryGetValue(sig, out int count) || count <= 0)
-                {
-                    return false; // 出现清单外的形状
-                }
-                required[sig] = count - 1;
-            }
-            foreach (int count in required.Values)
-            {
-                if (count != 0)
-                {
-                    return false; // 还有清单条目没被满足
-                }
-            }
-            return true;
+            return required;
         }
 
         /// <summary>返回需求形状清单副本（冗余补给按清单生成同形状替补）。</summary>
@@ -195,8 +259,8 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 计算「还缺哪些形状」：需求清单减去已放置灵石（按形状多重集合抵消）。
-        /// 用于填满但未愈合时的 HUD 提示。
+        /// 计算「清单里还没被用上」的形状：需求清单减去已放置的非冗余灵石（按形状多重集合抵消）。
+        /// 与 GetUnexpectedShapeEntries 一起组成填满但未愈合时的诊断日志。
         /// </summary>
         public List<List<Vector2Int>> GetMissingShapeEntries()
         {
@@ -211,9 +275,9 @@ namespace MendingtheSky
             }
             foreach (LingShi ls in placedLingShi)
             {
-                if (ls == null)
+                if (ls == null || ls.GetSourceHoleId() < 0)
                 {
-                    continue;
+                    continue; // 冗余灵石不占清单额度，与 MatchesPlacedShapes 保持一致
                 }
                 string sig = ls.GetShapeSignature();
                 for (int i = 0; i < remaining.Count; i++)

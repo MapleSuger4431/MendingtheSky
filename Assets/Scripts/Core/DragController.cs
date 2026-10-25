@@ -256,8 +256,9 @@ namespace MendingtheSky
             }
             Vector2Int anchor = gridManager.WorldToGrid(draggingLingShi.transform.position);
             List<Vector2Int> cells = MatchChecker.GetMatchedCells(draggingLingShi, anchor.x, anchor.y, gridManager);
-            bool valid = MatchChecker.CanPlace(draggingLingShi, anchor.x, anchor.y, gridManager);
-            gridVisual.ShowPreview(cells, valid);
+            // 三态预览：绿=可放且本洞清单还有这个形状；黄=可放但清单里没有这个形状；红=不可放
+            PreviewHint hint = MatchChecker.GetPreviewHint(draggingLingShi, anchor.x, anchor.y, gridManager);
+            gridVisual.ShowPreview(cells, hint);
         }
 
         private void ClearPreview()
