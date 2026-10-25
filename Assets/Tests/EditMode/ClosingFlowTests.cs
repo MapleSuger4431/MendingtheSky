@@ -106,5 +106,43 @@ namespace MendingtheSky.Tests
             Assert.IsNotNull(grid.GetHoleById(hole.GetHoleId()), "未填满时洞不应移除");
             Assert.IsFalse(hole.IsClosing(), "未填满时不应进入闭合");
         }
+
+        [Test]
+        public void FullButShapeMismatch_DoesNotHeal()
+        {
+            // 洞满但形状组合不符合需求清单 → 不愈合（保留现场供玩家重摆）
+            Hole hole = grid.GetAllHoles()[0];
+            var cells = hole.GetCells();
+            // 需求清单登记为「一块 domino」，但玩家用单格填满
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+
+            foreach (Vector2Int cell in cells)
+            {
+                grid.FillCells(CreateMonomino(), cell.x, cell.y);
+            }
+
+            Assert.IsTrue(hole.IsFull());
+            Assert.IsFalse(hole.IsClosing(), "形状不符时不应进入闭合");
+            Assert.IsNotNull(grid.GetHoleById(hole.GetHoleId()), "形状不符时洞应保留");
+        }
+
+        [Test]
+        public void FullWithMatchingShapes_Heals()
+        {
+            // 需求清单与放置形状一致 → 正常愈合
+            Hole hole = grid.GetAllHoles()[0];
+            var cells = hole.GetCells();
+            foreach (Vector2Int _ in cells)
+            {
+                hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero });
+            }
+
+            foreach (Vector2Int cell in cells)
+            {
+                grid.FillCells(CreateMonomino(), cell.x, cell.y);
+            }
+
+            Assert.IsNull(grid.GetHoleById(hole.GetHoleId()), "形状一致时应愈合移除");
+        }
     }
 }

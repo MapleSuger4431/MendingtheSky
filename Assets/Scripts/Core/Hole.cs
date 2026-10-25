@@ -20,11 +20,12 @@ namespace MendingtheSky
         private readonly List<LingShi> placedLingShi = new List<LingShi>();
 
         /// <summary>
-        /// 本洞的「形状清单」：生成洞时切出的灵石形状（每个条目对应一块必需灵石）。
-        /// 放置时按清单消耗一个匹配条目；取下时归还。清单耗尽 ⇔ 洞已拼满。
-        /// 未登记清单的洞（EditMode 测试/调试）默认放行任意形状。
+        /// 本洞的「需求形状清单」：生成洞时切出的灵石形状（每个条目对应一块必需灵石）。
+        /// 放置阶段不限制形状（自由放置）；只在洞口填满、准备愈合时校验
+        /// 「已放置灵石的形状多重集合」是否与清单一致（见 MatchesPlacedShapes）。
+        /// 未登记清单的洞（EditMode 测试/调试）默认通过。
         /// </summary>
-        private readonly List<List<Vector2Int>> remainingShapeEntries = new List<List<Vector2Int>>();
+        private readonly List<List<Vector2Int>> requiredShapeEntries = new List<List<Vector2Int>>();
         private bool hasShapeEntries;
 
         public void Init(int holeId, List<Vector2Int> cells)
@@ -34,7 +35,7 @@ namespace MendingtheSky
             nowCellCount = 0;
             isClosing = false;
             placedLingShi.Clear();
-            remainingShapeEntries.Clear();
+            requiredShapeEntries.Clear();
             hasShapeEntries = false;
             CalculateBoundaryEdges();
         }
@@ -63,9 +64,9 @@ namespace MendingtheSky
                 }
             }
             // 形状清单也一并合并（正常流程合并的是未填洞，清单尚未被消耗）
-            foreach (List<Vector2Int> entry in other.remainingShapeEntries)
+            foreach (List<Vector2Int> entry in other.requiredShapeEntries)
             {
-                remainingShapeEntries.Add(new List<Vector2Int>(entry));
+                requiredShapeEntries.Add(new List<Vector2Int>(entry));
             }
             hasShapeEntries |= other.hasShapeEntries;
             CalculateBoundaryEdges();
@@ -132,58 +133,61 @@ namespace MendingtheSky
             return new List<LingShi>(placedLingShi);
         }
 
-        // ---------------- 形状清单（2026-10-25 用户设计） ----------------
+        // ---------------- 需求形状清单（2026-10-25 用户设计） ----------------
 
-        /// <summary>登记一个形状条目（生成洞时为每块切出的灵石登记一次）。</summary>
-        public void AddShapeEntry(List<Vector2Int> cells)
+        /// <summary>登记一条需求形状（生成洞时为每块切出的灵石登记一次）。</summary>
+        public void AddRequiredShapeEntry(List<Vector2Int> cells)
         {
-            remainingShapeEntries.Add(new List<Vector2Int>(cells));
+            requiredShapeEntries.Add(new List<Vector2Int>(cells));
             hasShapeEntries = true;
         }
 
-        /// <summary>清单里是否还有该形状（旋转无关）。未登记清单的洞默认放行。</summary>
-        public bool HasShapeEntry(string signature)
+        /// <summary>
+        /// 愈合判定：洞内已放置灵石的形状多重集合是否与需求清单一致。
+        /// 同形状（旋转无关）可互换；数量必须一一对应。
+        /// 未登记清单的洞（EditMode 测试/调试）默认通过。
+        /// </summary>
+        public bool MatchesPlacedShapes()
         {
             if (!hasShapeEntries)
             {
                 return true;
             }
-            foreach (List<Vector2Int> entry in remainingShapeEntries)
+            var required = new Dictionary<string, int>();
+            foreach (List<Vector2Int> entry in requiredShapeEntries)
             {
-                if (ShapeCutter.GetCanonicalSignature(entry) == signature)
+                string sig = ShapeCutter.GetCanonicalSignature(entry);
+                required.TryGetValue(sig, out int count);
+                required[sig] = count + 1;
+            }
+            foreach (LingShi ls in placedLingShi)
+            {
+                if (ls == null)
                 {
-                    return true;
+                    continue;
+                }
+                string sig = ls.GetShapeSignature();
+                if (!required.TryGetValue(sig, out int count) || count <= 0)
+                {
+                    return false; // 出现清单外的形状
+                }
+                required[sig] = count - 1;
+            }
+            foreach (int count in required.Values)
+            {
+                if (count != 0)
+                {
+                    return false; // 还有清单条目没被满足
                 }
             }
-            return false;
+            return true;
         }
 
-        /// <summary>消耗一个匹配的形状条目（放置成功时调用），返回是否消耗成功。</summary>
-        public bool ConsumeShapeEntry(string signature)
+        /// <summary>返回需求形状清单副本（冗余补给按清单生成同形状替补）。</summary>
+        public List<List<Vector2Int>> GetRequiredShapeEntries()
         {
-            for (int i = 0; i < remainingShapeEntries.Count; i++)
-            {
-                if (ShapeCutter.GetCanonicalSignature(remainingShapeEntries[i]) == signature)
-                {
-                    remainingShapeEntries.RemoveAt(i);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /// <summary>归还一个形状条目（从洞上取下灵石时调用）。</summary>
-        public void RestoreShapeEntry(List<Vector2Int> cells)
-        {
-            remainingShapeEntries.Add(new List<Vector2Int>(cells));
-            hasShapeEntries = true;
-        }
-
-        /// <summary>返回剩余形状清单副本（冗余补给按清单生成同形状替补）。</summary>
-        public List<List<Vector2Int>> GetRemainingShapeEntries()
-        {
-            var copy = new List<List<Vector2Int>>(remainingShapeEntries.Count);
-            foreach (List<Vector2Int> entry in remainingShapeEntries)
+            var copy = new List<List<Vector2Int>>(requiredShapeEntries.Count);
+            foreach (List<Vector2Int> entry in requiredShapeEntries)
             {
                 copy.Add(new List<Vector2Int>(entry));
             }

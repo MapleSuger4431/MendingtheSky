@@ -47,8 +47,8 @@ namespace MendingtheSky
                 maxPiecesPerHole, random);
             foreach (List<Vector2Int> cells in pieces)
             {
-                // 为每块必需灵石在洞口登记形状条目：放置时按清单消耗
-                hole.AddShapeEntry(cells);
+                // 为每块必需灵石在洞口登记需求形状（愈合时校验形状组合）
+                hole.AddRequiredShapeEntry(cells);
                 CreateLingShi(levelConfig, cells, GetSpawnPosition(), hole.GetHoleId());
             }
         }
@@ -276,7 +276,7 @@ namespace MendingtheSky
                     {
                         continue;
                     }
-                    candidates.AddRange(hole.GetRemainingShapeEntries());
+                    candidates.AddRange(hole.GetRequiredShapeEntries());
                 }
                 if (candidates.Count > 0)
                 {

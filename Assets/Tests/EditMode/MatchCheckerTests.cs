@@ -178,36 +178,17 @@ namespace MendingtheSky.Tests
         }
 
         [Test]
-        public void CanPlace_RequiresMatchingShapeEntry()
+        public void CanPlace_FreePlacement_IgnoresShapeList()
         {
-            // 2026-10-25 用户设计：洞口维护形状清单，清单里必须有对应形状才能放
+            // 2026-10-25 用户确认：放置阶段不做清单限制，几何贴合即可放；
+            // 清单只在洞口填满、准备愈合时校验（见 HoleTests.MatchesPlacedShapes）。
             Hole hole = gridManager.GetAllHoles()[0];
             List<Vector2Int> pair = FindAdjacentPair(hole);
-            hole.AddShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
-
-            LingShi domino = CreatePiece(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
-            Assert.IsTrue(MatchChecker.CanPlace(domino, pair[0].x, pair[0].y, gridManager),
-                "清单内有该形状 → 可放");
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
 
             LingShi single = CreatePiece(new List<Vector2Int> { Vector2Int.zero });
-            Assert.IsFalse(MatchChecker.CanPlace(single, pair[0].x, pair[0].y, gridManager),
-                "清单里没有该形状 → 不可放");
-        }
-
-        [Test]
-        public void FillConsumesShapeEntry_UnfillRestores()
-        {
-            Hole hole = gridManager.GetAllHoles()[0];
-            List<Vector2Int> pair = FindAdjacentPair(hole);
-            var shape = new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) };
-            hole.AddShapeEntry(shape);
-            LingShi piece = CreatePiece(shape);
-
-            gridManager.FillCells(piece, pair[0].x, pair[0].y);
-            Assert.AreEqual(0, hole.GetRemainingShapeEntries().Count, "放置后清单条目应被消耗");
-
-            gridManager.UnfillCells(piece);
-            Assert.AreEqual(1, hole.GetRemainingShapeEntries().Count, "取下后清单条目应归还");
+            Assert.IsTrue(MatchChecker.CanPlace(single, pair[0].x, pair[0].y, gridManager),
+                "即使清单里没有单格形状，几何可贴合就允许放置");
         }
     }
 }
