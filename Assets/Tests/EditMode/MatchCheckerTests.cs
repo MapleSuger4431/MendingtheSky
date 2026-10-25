@@ -115,8 +115,9 @@ namespace MendingtheSky.Tests
         }
 
         [Test]
-        public void CanPlace_WrongSourceHole_False_ButShapeFitsOtherHole()
+        public void CanPlace_OtherHoleSameShape_True_SourceBindingRemoved()
         {
+            // 2026-10-24 用户反馈：不同洞口的同形状灵石可以互换，取消来源洞硬绑定
             List<Hole> holes = gridManager.GetAllHoles();
             Assert.GreaterOrEqual(holes.Count, 2);
             Hole target = holes[0];
@@ -124,8 +125,8 @@ namespace MendingtheSky.Tests
             List<Vector2Int> pair = FindAdjacentPair(target);
             LingShi piece = CreatePiece(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) },
                 other.GetHoleId());
-            Assert.IsFalse(MatchChecker.CanPlace(piece, pair[0].x, pair[0].y, gridManager));
-            Assert.IsTrue(MatchChecker.IsShapeFitsOtherHole(piece, pair[0].x, pair[0].y, gridManager));
+            Assert.IsTrue(MatchChecker.CanPlace(piece, pair[0].x, pair[0].y, gridManager),
+                "同形状灵石应可在任意洞口的合法位置放置");
         }
 
         [Test]

@@ -17,6 +17,8 @@ namespace MendingtheSky
         [SerializeField] private float itemScale = 0.6f;
         [SerializeField] private int maxPiecesPerHole = ShapeCutter.DefaultMaxPieces;
         [SerializeField] private float spawnJitter = 0.15f;
+        [Tooltip("初始灵石随机朝向：避免拿起来无需旋转即可拼，保留旋转玩法")]
+        [SerializeField] private bool randomizeInitialRotation = true;
 
         private readonly List<LingShi> lingShiList = new List<LingShi>();
         private GridManager gridManager;
@@ -204,6 +206,11 @@ namespace MendingtheSky
             }
             var shape = new LingShiShape();
             shape.Init(cells);
+            // 初始朝向随机（0~3 步）：玩家需要旋转才能拼入，旋转机制才有意义
+            if (randomizeInitialRotation)
+            {
+                shape.SetRotationSteps(random.Next(4));
+            }
             GameObject go = Instantiate(lingShiPrefab, position, Quaternion.identity, root);
             var ls = go.GetComponent<LingShi>();
             ls.Init(type, shape, position, itemScale, gridManager != null ? gridManager.GetCellSize() : 1f);

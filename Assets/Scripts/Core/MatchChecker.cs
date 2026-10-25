@@ -5,9 +5,9 @@ namespace MendingtheSky
 {
     /// <summary>
     /// 放置匹配检查（静态工具）：
-    /// 形状覆盖的所有格必须在网格内、都是缺口格（grid==0）、且属于同一个洞；
-    /// 另按评审 P0-6 做「灵石绑定来源洞」校验：必需灵石只能放回切出它的洞，
-    /// 冗余灵石 sourceHoleId = -1 可放任意洞。
+    /// 形状覆盖的所有格必须在网格内、都是缺口格（grid==0）、且属于同一个洞。
+    /// 2026-10-24 用户反馈：不同洞口的同形状灵石可以互换，取消「灵石绑定来源洞」的硬校验
+    ///（sourceHoleId 仍记录用于调试/统计，但不参与可放判定）。
     /// </summary>
     public static class MatchChecker
     {
@@ -39,26 +39,8 @@ namespace MendingtheSky
             {
                 return null;
             }
-            int sourceId = ls.GetSourceHoleId();
-            if (sourceId >= 0 && hole != null && hole.GetHoleId() != sourceId)
-            {
-                return null;
-            }
+            // 不再校验来源洞：形状匹配 + 同洞即可，同形状灵石可互换使用
             return hole;
-        }
-
-        /// <summary>
-        /// 形状与同洞检查通过、但来源洞不符（预览用橙色提示）。
-        /// </summary>
-        public static bool IsShapeFitsOtherHole(LingShi ls, int targetRow, int targetCol,
-            GridManager gridManager)
-        {
-            if (!CheckShapePlacement(ls, targetRow, targetCol, gridManager, out Hole hole))
-            {
-                return false;
-            }
-            int sourceId = ls.GetSourceHoleId();
-            return sourceId >= 0 && hole != null && hole.GetHoleId() != sourceId;
         }
 
         private static bool CheckShapePlacement(LingShi ls, int targetRow, int targetCol,

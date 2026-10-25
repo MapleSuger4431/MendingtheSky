@@ -15,7 +15,7 @@ MonoBehaviour:
   typeId: red
   displayName: "\u7EA2\u7075\u77F3"
   cookTime: 3
-  qiValue: 2
+  qiValue: 4
   normalSprite: {fileID: 21300000, guid: dad14f8c4583efb4ea1798b44d1ae298, type: 3}
   dustSprite: {fileID: 21300000, guid: 216422f430d1a504fbe062e4f7d48853, type: 3}
   glowSprite: {fileID: 21300000, guid: 68ea69fcd8d60d941b1e2731bffcd0b8, type: 3}

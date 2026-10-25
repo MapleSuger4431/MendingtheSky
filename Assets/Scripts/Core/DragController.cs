@@ -9,9 +9,7 @@ namespace MendingtheSky
     /// 拾取方案 A：只检测灵石碰撞体（Physics2D.OverlapPointAll），取排序最上层。
     ///
     /// 放置判定与预览颜色（2026-10-24 用户确认）：
-    ///   🟢 绿色 = 可放置：形状覆盖的都是缺口格、且属于同一个洞、来源洞校验通过；
-    ///   🟠 橙色 = 形状匹配且同洞，但不是切出它的洞（来源洞绑定生效）；
-    ///       冗余灵石 sourceHoleId = -1，没有绑定，能放就是绿色；
+    ///   🟢 绿色 = 可放置：形状覆盖的都是缺口格、且属于同一个洞（同形状灵石可互换）；
     ///   🔴 红色 = 不可放：越界 / 非缺口格 / 跨洞 / 未煮熟。
     /// 不再用“可能导致洞口拼不满”作为拒绝条件（自由放置优先，拼错可点选取下重摆）。
     /// OnMouseUp 判定优先级（评审 P0-4）：
@@ -254,8 +252,7 @@ namespace MendingtheSky
             Vector2Int anchor = gridManager.WorldToGrid(draggingLingShi.transform.position);
             List<Vector2Int> cells = MatchChecker.GetMatchedCells(draggingLingShi, anchor.x, anchor.y, gridManager);
             bool valid = MatchChecker.CanPlace(draggingLingShi, anchor.x, anchor.y, gridManager);
-            bool wrongHole = !valid && MatchChecker.IsShapeFitsOtherHole(draggingLingShi, anchor.x, anchor.y, gridManager);
-            gridVisual.ShowPreview(cells, valid, wrongHole);
+            gridVisual.ShowPreview(cells, valid);
         }
 
         private void ClearPreview()
