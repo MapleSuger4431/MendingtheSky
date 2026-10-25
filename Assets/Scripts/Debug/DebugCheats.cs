@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MendingtheSky
@@ -11,6 +12,7 @@ namespace MendingtheSky
     /// - L：重开关卡
     /// - I：重新生成背篓初始灵石
     /// - H：把鼠标所指洞口里已放置的灵石全部取下并放回背篓（纠正误放/死局）
+    /// - J：打印所有洞口的形状清单、清单总格数与 CanTile 可解性（排查「这个洞要什么形状、能不能拼」）
     /// </summary>
     public class DebugCheats : MonoBehaviour
     {
@@ -113,6 +115,73 @@ namespace MendingtheSky
                         Debug.Log("[Cheats] 鼠标下没有洞口");
                     }
                 }
+            }
+
+            // J：打印所有洞口的形状清单与可解性（不知道某个洞该拼什么形状时用）
+            if (Input.GetKeyDown(KeyCode.J))
+            {
+                LogHoleShapeLists();
+            }
+        }
+
+        /// <summary>
+        /// 打印场上每个洞口的形状清单、清单总格数与 CanTile 可解性。
+        /// 用于回答「这个洞到底需要哪些形状、这套形状能不能铺满它」，避免靠预览颜色去猜。
+        /// 公开方法，便于在 Play Mode 里用脚本直接调用验证。
+        /// </summary>
+        public void LogHoleShapeLists()
+        {
+            if (gridManager == null)
+            {
+                Debug.Log("[Cheats] gridManager 未接线，无法打印洞口清单");
+                return;
+            }
+            List<Hole> holes = gridManager.GetAllHoles();
+            Debug.Log($"[Cheats] ===== 洞口清单诊断（共 {holes.Count} 个洞）=====");
+            foreach (Hole hole in holes)
+            {
+                List<List<Vector2Int>> entries = hole.GetRequiredShapeEntries();
+                int listCells = 0;
+                var counts = new Dictionary<string, int>();
+                foreach (List<Vector2Int> entry in entries)
+                {
+                    listCells += entry.Count;
+                    string name = ShapeDescriber.Describe(entry);
+                    counts.TryGetValue(name, out int count);
+                    counts[name] = count + 1;
+                }
+                var parts = new List<string>();
+                foreach (KeyValuePair<string, int> kv in counts)
+                {
+                    parts.Add(kv.Value > 1 ? $"{kv.Key}×{kv.Value}" : kv.Key);
+                }
+                string listText = parts.Count > 0 ? string.Join("、", parts) : "（无清单）";
+
+                // CanTile：这套清单是否恰好能铺满整个洞（洞格数 = 清单格数时的完全覆盖问题）
+                string solvable = entries.Count == 0
+                    ? "未登记清单，跳过"
+                    : (ShapeCutter.CanTile(hole.GetCells(), entries) ? "可解" : "不可解");
+
+                string cellWarn = entries.Count > 0 && listCells != hole.GetRequiredCellCount()
+                    ? $"  ⚠ 清单格数({listCells}) ≠ 洞格数({hole.GetRequiredCellCount()})，可能被重复切石登记"
+                    : string.Empty;
+
+                int ownPieces = 0;
+                if (inventoryManager != null)
+                {
+                    foreach (LingShi ls in inventoryManager.GetAll())
+                    {
+                        if (ls != null && ls.GetSourceHoleId() == hole.GetHoleId())
+                        {
+                            ownPieces++;
+                        }
+                    }
+                }
+
+                Debug.Log($"[Cheats] 洞#{hole.GetHoleId()}：{hole.GetRequiredCellCount()} 格 | " +
+                          $"已填 {hole.GetNowCellCount()} 格、已放 {hole.GetPlacedLingShi().Count} 块 | " +
+                          $"清单 {entries.Count} 条 / {listCells} 格：{listText} | " +
+                          $"CanTile={solvable} | 存世本洞灵石 {ownPieces} 块{cellWarn}");
             }
         }
     }
