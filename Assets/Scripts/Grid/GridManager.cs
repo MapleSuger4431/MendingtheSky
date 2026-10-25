@@ -114,6 +114,13 @@ namespace MendingtheSky
                 bool mergedIntoExisting = existingHoleIds.Contains(newHole.GetHoleId());
                 Debug.Log($"[GridManager] 动态补洞：{(mergedIntoExisting ? "并入已有洞" : "新建洞")}#{newHole.GetHoleId()}" +
                           $"（{newHole.GetRequiredCellCount()} 格，场上洞数 {holes.Count}）");
+                // 2026-10-25 修复：补洞后必须重建网格视觉。
+                // 之前漏了这一行，新洞的格子不会被画出来，要等到下一个洞愈合触发 RefreshAll 才「一次性冒出来」，
+                // 表现为「背篓多了石头但工作台看不到洞」。
+                if (gridVisual != null)
+                {
+                    gridVisual.RefreshAll();
+                }
                 // 动态补洞后立刻发放灵石（阶段 5：由 GridManager 直接通知背篓）
                 if (inventoryManager != null)
                 {
