@@ -80,7 +80,7 @@ namespace MendingtheSky
                 Debug.Log("[Cheats] 背篓灵石已重发");
             }
 
-            // H：取下鼠标所指洞口的全部已放置灵石（自由放置可能造成死局，用于手动修正）
+            // H：取下鼠标所指洞口的全部已放置灵石（洞口满但形状不符时用于重摆）
             if (gridManager != null && inventoryManager != null && Input.GetKeyDown(KeyCode.H))
             {
                 var cam = Camera.main;
@@ -96,7 +96,11 @@ namespace MendingtheSky
                         foreach (LingShi ls in inventoryManager.GetAll())
                         {
                             if (ls == null || ls.GetState() != LingShiState.Placed) continue;
-                            if (ls.GetSourceHoleId() != hole.GetHoleId()) continue;
+                            var placedCells = ls.GetPlacedCells();
+                            if (placedCells.Count == 0) continue;
+                            // 用实际放置位置判断属于哪个洞（自由放置下不能依赖 sourceHoleId）
+                            var firstCell = placedCells[0];
+                            if (gridManager.GetHoleAt(firstCell.x, firstCell.y) != hole) continue;
                             gridManager.UnfillCells(ls);
                             ls.SetState(LingShiState.Cooked);
                             inventoryManager.ReturnToBasket(ls);

@@ -600,7 +600,25 @@ namespace MendingtheSky
             }
             if (!hole.MatchesPlacedShapes())
             {
-                Debug.Log($"[GridManager] 洞口#{hole.GetHoleId()} 已填满，但灵石形状组合不符合需求清单，暂不愈合（可取下重摆）");
+                // 组装「还缺什么形状」提示（按名称聚合数量），HUD 与日志同时给出
+                var counts = new Dictionary<string, int>();
+                foreach (List<Vector2Int> entry in hole.GetMissingShapeEntries())
+                {
+                    string name = ShapeDescriber.Describe(entry);
+                    counts.TryGetValue(name, out int count);
+                    counts[name] = count + 1;
+                }
+                var parts = new List<string>();
+                foreach (var kv in counts)
+                {
+                    parts.Add(kv.Value > 1 ? $"{kv.Key}×{kv.Value}" : kv.Key);
+                }
+                string hint = parts.Count > 0 ? "洞口需要：" + string.Join("、", parts) : "洞口形状组合不符";
+                Debug.Log($"[GridManager] 洞口#{hole.GetHoleId()} 已填满，但形状组合不符（{hint}），暂不愈合");
+                if (gameManager != null)
+                {
+                    gameManager.OnHoleShapeMismatch(hint);
+                }
                 return;
             }
             MarkHoleClosing(hole);

@@ -195,6 +195,40 @@ namespace MendingtheSky
         }
 
         /// <summary>
+        /// 计算「还缺哪些形状」：需求清单减去已放置灵石（按形状多重集合抵消）。
+        /// 用于填满但未愈合时的 HUD 提示。
+        /// </summary>
+        public List<List<Vector2Int>> GetMissingShapeEntries()
+        {
+            var remaining = new List<List<Vector2Int>>();
+            if (!hasShapeEntries)
+            {
+                return remaining;
+            }
+            foreach (List<Vector2Int> entry in requiredShapeEntries)
+            {
+                remaining.Add(new List<Vector2Int>(entry));
+            }
+            foreach (LingShi ls in placedLingShi)
+            {
+                if (ls == null)
+                {
+                    continue;
+                }
+                string sig = ls.GetShapeSignature();
+                for (int i = 0; i < remaining.Count; i++)
+                {
+                    if (ShapeCutter.GetCanonicalSignature(remaining[i]) == sig)
+                    {
+                        remaining.RemoveAt(i);
+                        break;
+                    }
+                }
+            }
+            return remaining;
+        }
+
+        /// <summary>
         /// 灵气返还 = 本洞所有灵石的 qiValue 之和（按种类配置）。
         /// 在 FinishHoleClosing 时调用，此时灵石尚未销毁。
         /// </summary>

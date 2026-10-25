@@ -65,6 +65,11 @@ namespace MendingtheSky
             {
                 return;
             }
+            if (Input.GetMouseButtonDown(1))
+            {
+                // 右键快速取下已放置的灵石（放回背篓，保持已煮），用于纠正放错的块
+                TryEjectPlaced(Input.mousePosition);
+            }
             if (Input.GetMouseButtonDown(0))
             {
                 OnMouseDown(Input.mousePosition);
@@ -303,6 +308,42 @@ namespace MendingtheSky
             isDragging = false;
             stashedLingShi.Clear();
             ClearPreview();
+        }
+
+        /// <summary>
+        /// 右键快速取下：找到指针下已放置的灵石，从洞口取下并直接放回背篓（保持 Cooked）。
+        /// 用于「洞口已满但形状组合不符」时快速纠正，不用重新拖拽。
+        /// 公开以便调试脚本直接调用（正常入口是鼠标右键）。
+        /// </summary>
+        public void TryEjectPlaced(Vector2 screenPos)
+        {
+            Vector3 world = ScreenToWorld(screenPos);
+            Collider2D[] hits = Physics2D.OverlapPointAll(world);
+            LingShi target = null;
+            int bestOrder = int.MinValue;
+            foreach (Collider2D hit in hits)
+            {
+                LingShi ls = hit.GetComponentInParent<LingShi>();
+                if (ls == null || ls.GetState() != LingShiState.Placed)
+                {
+                    continue;
+                }
+                SpriteRenderer sr = hit.GetComponentInParent<SpriteRenderer>();
+                int order = sr != null ? sr.sortingOrder : 0;
+                if (order > bestOrder)
+                {
+                    target = ls;
+                    bestOrder = order;
+                }
+            }
+            if (target == null)
+            {
+                return;
+            }
+            gridManager.UnfillCells(target);
+            target.SetState(LingShiState.Cooked);
+            inventoryManager.ReturnToBasket(target);
+            Debug.Log("[DragController] 右键取下了一块灵石（已放回背篓）");
         }
 
         private LingShi TryPickUp(Vector2 screenPos)
