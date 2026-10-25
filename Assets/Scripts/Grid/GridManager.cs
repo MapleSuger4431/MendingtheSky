@@ -589,8 +589,8 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 洞口是否已填满：满了就愈合（2026-10-25 定稿：自由放置，不限形状组合）。
-        /// 防死局不在这里判定，而由 FinishHoleClosing 的「按来源洞销毁」规则保证。
+        /// 洞口是否已填满：满且未闭合 → 校验「已放置灵石的形状组合」是否符合需求清单，
+        /// 符合才进入闭合（2026-10-25 用户设计：自由放置，愈合时判定）。
         /// </summary>
         public void CheckHoleClosed(Hole hole)
         {
@@ -598,10 +598,28 @@ namespace MendingtheSky
             {
                 return;
             }
-            // 需求形状清单仍随洞生成登记，但只作提示/调试用途，不参与愈合判定
             if (!hole.MatchesPlacedShapes())
             {
-                Debug.Log($"[GridManager] 洞口#{hole.GetHoleId()} 已按自由放置愈合（实际形状组合与切出清单不同）");
+                // 组装「还缺什么形状」提示（按名称聚合数量），HUD 与日志同时给出
+                var counts = new Dictionary<string, int>();
+                foreach (List<Vector2Int> entry in hole.GetMissingShapeEntries())
+                {
+                    string name = ShapeDescriber.Describe(entry);
+                    counts.TryGetValue(name, out int count);
+                    counts[name] = count + 1;
+                }
+                var parts = new List<string>();
+                foreach (var kv in counts)
+                {
+                    parts.Add(kv.Value > 1 ? $"{kv.Key}×{kv.Value}" : kv.Key);
+                }
+                string hint = parts.Count > 0 ? "洞口需要：" + string.Join("、", parts) : "洞口形状组合不符";
+                Debug.Log($"[GridManager] 洞口#{hole.GetHoleId()} 已填满，但形状组合不符（{hint}），暂不愈合");
+                if (gameManager != null)
+                {
+                    gameManager.OnHoleShapeMismatch(hint);
+                }
+                return;
             }
             MarkHoleClosing(hole);
         }
@@ -643,14 +661,8 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 闭合结算：计算灵气返还 → 按来源洞决定每块灵石「销毁 or 退回背篓」 →
-        /// 格子恢复为正常(-1) → 移除洞 → 通知 GameManager（加灵气、累计洞数、检查胜利）。
-        ///
-        /// 灵石去留规则（2026-10-25 定稿的「方案 A」）：
-        /// - 只销毁本洞自己切出的灵石（sourceHoleId == 本洞 holeId）；
-        /// - 其它洞来源的灵石（含 sourceHoleId == -1 的冗余灵石）一律退回背篓并保持 Cooked。
-        /// 因为每个洞自己切出的灵石永远不会被别的洞销毁，所以任何洞都能用任意形状拼满愈合，
-        /// 也不会出现「形状被别的洞吃掉、原洞再也拼不满」的死局。
+        /// 闭合结算：计算灵气返还 → 销毁灵石 → 格子恢复为正常(-1) → 移除洞 →
+        /// 通知 GameManager（加灵气、累计洞数、检查胜利）。
         /// </summary>
         public void FinishHoleClosing(Hole hole)
         {
@@ -659,22 +671,10 @@ namespace MendingtheSky
                 return;
             }
             float qiReward = hole.GetQiReward();
-            int returnedCount = 0;
             foreach (LingShi ls in hole.GetPlacedLingShi())
             {
                 if (ls == null)
                 {
-                    continue;
-                }
-                if (ls.GetSourceHoleId() != hole.GetHoleId())
-                {
-                    // 借来的灵石：解锁并退回背篓。SetState 会重建方块，顺带恢复被 DisableInteraction 关掉的碰撞器。
-                    ls.SetState(LingShiState.Cooked);
-                    if (inventoryManager != null)
-                    {
-                        inventoryManager.ReturnToBasket(ls);
-                    }
-                    returnedCount++;
                     continue;
                 }
                 if (inventoryManager != null)
@@ -688,14 +688,6 @@ namespace MendingtheSky
                 else
                 {
                     DestroyImmediate(ls.gameObject);
-                }
-            }
-            if (returnedCount > 0)
-            {
-                Debug.Log($"[GridManager] 洞口#{hole.GetHoleId()} 愈合，{returnedCount} 块借来的灵石已退回背篓");
-                if (gameManager != null)
-                {
-                    gameManager.OnBorrowedLingShiReturned(returnedCount);
                 }
             }
             foreach (Vector2Int cell in hole.GetCells())

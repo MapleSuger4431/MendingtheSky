@@ -206,18 +206,13 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 洞口愈合时「借来的」灵石被退回背篓：在 HUD 状态栏给一条轻提示，让玩家知道灵石没有消失。
-        /// （2026-10-25 定稿：愈合条件只看是否填满，借来的灵石会归位。）
+        /// 洞口已填满但形状组合不符：把「还缺什么形状」的提示显示到 HUD。
         /// </summary>
-        public void OnBorrowedLingShiReturned(int count)
+        public void OnHoleShapeMismatch(string message)
         {
-            if (count <= 0)
-            {
-                return;
-            }
             if (uiManager != null)
             {
-                uiManager.ShowStatus($"灵石归位 ×{count}");
+                uiManager.ShowStatus(message);
             }
         }
 

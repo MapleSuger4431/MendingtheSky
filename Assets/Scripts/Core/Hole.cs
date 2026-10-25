@@ -20,10 +20,10 @@ namespace MendingtheSky
         private readonly List<LingShi> placedLingShi = new List<LingShi>();
 
         /// <summary>
-        /// 本洞的「需求形状清单」：生成洞时切出的灵石形状（每个条目对应一块切出的灵石）。
-        /// 2026-10-25 定稿：不参与愈合判定（填满即愈合），仅作提示/调试用途；
-        /// 冗余补给也按它抽同形状替补，保证补给的灵石一定能用上。
-        /// 未登记清单的洞（EditMode 测试/调试）视为空清单。
+        /// 本洞的「需求形状清单」：生成洞时切出的灵石形状（每个条目对应一块必需灵石）。
+        /// 放置阶段不限制形状（自由放置）；只在洞口填满、准备愈合时校验
+        /// 「已放置灵石的形状多重集合」是否与清单一致（见 MatchesPlacedShapes）。
+        /// 未登记清单的洞（EditMode 测试/调试）默认通过。
         /// </summary>
         private readonly List<List<Vector2Int>> requiredShapeEntries = new List<List<Vector2Int>>();
         private bool hasShapeEntries;
@@ -143,8 +143,7 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 调试用比对：洞内已放置灵石的形状多重集合是否与需求清单一致。
-        /// 2026-10-25 定稿后愈合只看「是否填满」，本方法只用于日志/诊断，不参与判定。
+        /// 愈合判定：洞内已放置灵石的形状多重集合是否与需求清单一致。
         /// 同形状（旋转无关）可互换；数量必须一一对应。
         /// 未登记清单的洞（EditMode 测试/调试）默认通过。
         /// </summary>
@@ -197,7 +196,7 @@ namespace MendingtheSky
 
         /// <summary>
         /// 计算「还缺哪些形状」：需求清单减去已放置灵石（按形状多重集合抵消）。
-        /// 调试/提示用途（愈合不依赖它）。
+        /// 用于填满但未愈合时的 HUD 提示。
         /// </summary>
         public List<List<Vector2Int>> GetMissingShapeEntries()
         {
