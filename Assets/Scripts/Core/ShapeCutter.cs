@@ -128,25 +128,43 @@ namespace MendingtheSky
         /// 枚举「哪块灵石、哪种旋转、用它的哪个格子对准该格」，递归搜索。
         /// 空洞规模 ≤45 格、块数 ≤8，分支有限；超过节点上限时放行（宁可放行也不误拒合法操作）。
         /// </summary>
-        public static bool CanTile(List<Vector2Int> remainingCells, List<List<Vector2Int>> pieces)
+        public static bool CanTile(List<Vector2Int> remainingCells, List<List<Vector2Int>> pieces,
+            bool allowSubset = false)
         {
             if (remainingCells == null || pieces == null)
             {
                 return false;
             }
             int remainingCount = remainingCells.Count;
-            int pieceCellCount = 0;
-            foreach (List<Vector2Int> piece in pieces)
-            {
-                pieceCellCount += piece.Count;
-            }
-            if (remainingCount != pieceCellCount)
-            {
-                return false; // 格子数与剩余块总格数不一致，必然拼不满
-            }
             if (remainingCount == 0)
             {
                 return true;
+            }
+            if (!allowSubset)
+            {
+                // 严格模式：传入的块必须恰好用完（切割/测试用）
+                int pieceCellCount = 0;
+                foreach (List<Vector2Int> piece in pieces)
+                {
+                    pieceCellCount += piece.Count;
+                }
+                if (remainingCount != pieceCellCount)
+                {
+                    return false; // 格子数与剩余块总格数不一致，必然拼不满
+                }
+            }
+            else
+            {
+                // 子集模式：只要求能从池中挑出一组块恰好铺满剩余格（全局可解性检查用）
+                int availableCells = 0;
+                foreach (List<Vector2Int> piece in pieces)
+                {
+                    availableCells += piece.Count;
+                }
+                if (availableCells < remainingCount)
+                {
+                    return false; // 连总量都不够
+                }
             }
             var remaining = new HashSet<Vector2Int>(remainingCells);
             var used = new bool[pieces.Count];

@@ -182,5 +182,22 @@ namespace MendingtheSky.Tests
             };
             Assert.IsTrue(ShapeCutter.CanTile(remaining, pieces), "横条旋转 90° 后应能铺满竖洞");
         }
+
+        [Test]
+        public void CanTile_SubsetMode_AllowsExtraPiecesInPool()
+        {
+            // 全局可解性检查：池子里有别的洞的块（多余），只要存在子集能铺满即可
+            var remaining = new List<Vector2Int>
+            {
+                new Vector2Int(0, 0), new Vector2Int(1, 0)
+            };
+            var pieces = new List<List<Vector2Int>>
+            {
+                new List<Vector2Int> { new Vector2Int(0, 0), new Vector2Int(0, 1) }, // 可旋转后铺满
+                new List<Vector2Int> { new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(1, 1) } // 多余
+            };
+            Assert.IsFalse(ShapeCutter.CanTile(remaining, pieces), "严格模式要求恰好用完，应 false");
+            Assert.IsTrue(ShapeCutter.CanTile(remaining, pieces, true), "子集模式应允许从池中挑选");
+        }
     }
 }

@@ -52,6 +52,9 @@ namespace MendingtheSky
         /// <summary>当前正在拖拽的灵石（无则为 null）。调试与 UI 提示用。</summary>
         public LingShi GetDraggingLingShi() { return draggingLingShi; }
 
+        /// <summary>暂存中的灵石（可解性检查收集未放置灵石时使用）。</summary>
+        public List<LingShi> GetStashedPieces() { return new List<LingShi>(stashedLingShi); }
+
         private void Awake()
         {
             cam = Camera.main;
@@ -165,12 +168,17 @@ namespace MendingtheSky
                 Hole targetHole = MatchChecker.GetMatchedHole(ls, anchor.x, anchor.y, gridManager);
                 if (targetHole != null)
                 {
-                    // 2026-10-24 用户反馈：完全按「形状 + 同洞 + 来源洞」判定放置，
-                    // 不再因“可能导致该洞无法拼满”拒绝——自由放置优先，拼错可点选取下重摆。
+                    // 2026-10-24 用户反馈：完全按「形状 + 同洞」判定放置（取消来源洞绑定），
+                    // 自由放置优先，拼错可点选取下重摆。
                     gridManager.FillCells(ls, anchor.x, anchor.y);
                     ls.SetTransparent(false);
                     ls.SetTargetScale(1f);
                     StartCoroutine(SnapToCell(ls, anchor));
+                    // 放置后做全局可解性检查：其它洞若因此缺形状，会自动补发灵石
+                    if (gameManager != null)
+                    {
+                        gameManager.EnsureHolesSolvable();
+                    }
                     EndDrag();
                     return;
                 }

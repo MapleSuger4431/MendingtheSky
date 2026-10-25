@@ -226,6 +226,23 @@ namespace MendingtheSky
             return ls;
         }
 
+        /// <summary>
+        /// 死局修复：为指定洞口的剩余格子重新切一批灵石并投放到背篓。
+        /// 用于「灵石可跨洞互换 + 闭合销毁」导致的形状缺失兜底（GameManager.EnsureHolesSolvable 调用）。
+        /// </summary>
+        public void SupplyPiecesForCells(List<Vector2Int> cells, int sourceHoleId, LevelConfig levelConfig)
+        {
+            if (cells == null || cells.Count == 0 || shapePoolConfig == null)
+            {
+                return;
+            }
+            List<List<Vector2Int>> pieces = ShapeCutter.Cut(cells, shapePoolConfig, maxPiecesPerHole, random);
+            foreach (List<Vector2Int> pieceCells in pieces)
+            {
+                CreateLingShi(levelConfig, pieceCells, GetSpawnPosition(), sourceHoleId);
+            }
+        }
+
         private Vector3 GetSpawnPosition()
         {
             Vector3 pos = basketSpawnPoint != null ? basketSpawnPoint.position : transform.position;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MendingtheSky
@@ -165,6 +166,11 @@ namespace MendingtheSky
             qiManager.AddQi(qiReward);
             filledHoleCount++;
             CheckWinCondition();
+            // 闭合会销毁洞内灵石；其它洞若因此缺少必要形状，立即补发（仍为 Playing 时）
+            if (state == GameState.Playing)
+            {
+                EnsureHolesSolvable();
+            }
         }
 
         /// <summary>灵气归零（失败）：只从 Playing 进入 Lose，避免重复结算。</summary>
@@ -201,6 +207,84 @@ namespace MendingtheSky
                     dragController.ResetAll();
                 }
                 uiManager.ShowWin(filledHoleCount, levelConfig.GetTotalHoles());
+            }
+        }
+
+        /// <summary>
+        /// 全局可解性保障（2026-10-25 用户反馈）：
+        /// 灵石可跨洞互换后，闭合的洞会销毁其中的灵石，可能带走其它洞需要的形状。
+        /// 放置与闭合后检查每个开放洞：其剩余格能否被当前所有未放置灵石（背篓+锅+暂存）拼满；
+        /// 不能则按剩余格重新切一批灵石投放到背篓，保证任何洞都不会陷入死局。
+        /// </summary>
+        public void EnsureHolesSolvable()
+        {
+            if (gridManager == null || inventoryManager == null || levelConfig == null)
+            {
+                return;
+            }
+            var unplaced = new List<List<Vector2Int>>();
+            CollectUnplacedShapes(unplaced);
+
+            foreach (Hole hole in gridManager.GetAllHoles())
+            {
+                if (hole.IsClosing())
+                {
+                    continue;
+                }
+                var remaining = new List<Vector2Int>();
+                foreach (Vector2Int cell in hole.GetCells())
+                {
+                    if (gridManager.GetCell(cell.x, cell.y) == GridManager.CellHole)
+                    {
+                        remaining.Add(cell);
+                    }
+                }
+                if (remaining.Count == 0)
+                {
+                    continue;
+                }
+                if (ShapeCutter.CanTile(remaining, unplaced, allowSubset: true))
+                {
+                    continue;
+                }
+                inventoryManager.SupplyPiecesForCells(remaining, hole.GetHoleId(), levelConfig);
+                Debug.Log($"[GameManager] 洞口#{hole.GetHoleId()} 缺少可用形状，已补充灵石（剩余 {remaining.Count} 格）");
+                // 新补的灵石进入背篓列表，重新收集供后续洞使用
+                unplaced.Clear();
+                CollectUnplacedShapes(unplaced);
+            }
+        }
+
+        private void CollectUnplacedShapes(List<List<Vector2Int>> shapes)
+        {
+            CollectShapes(inventoryManager.GetAll(), shapes);
+            if (potManager != null)
+            {
+                CollectShapes(potManager.GetAllPieces(), shapes);
+            }
+            if (dragController != null)
+            {
+                CollectShapes(dragController.GetStashedPieces(), shapes);
+            }
+        }
+
+        private static void CollectShapes(List<LingShi> list, List<List<Vector2Int>> shapes)
+        {
+            if (list == null)
+            {
+                return;
+            }
+            foreach (LingShi ls in list)
+            {
+                if (ls == null)
+                {
+                    continue;
+                }
+                if (ls.GetState() != LingShiState.InBasket && ls.GetState() != LingShiState.Cooked)
+                {
+                    continue;
+                }
+                shapes.Add(ls.GetBaseCells());
             }
         }
 
