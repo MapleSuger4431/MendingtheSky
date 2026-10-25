@@ -5,9 +5,10 @@ namespace MendingtheSky
 {
     /// <summary>
     /// 放置匹配检查（静态工具）：
-    /// 形状覆盖的所有格必须在网格内、都是缺口格（grid==0）、且属于同一个洞。
-    /// 2026-10-24 用户反馈：不同洞口的同形状灵石可以互换，取消「灵石绑定来源洞」的硬校验
-    ///（sourceHoleId 仍记录用于调试/统计，但不参与可放判定）。
+    /// 形状覆盖的所有格必须在网格内、都是缺口格（grid==0）、且属于同一个洞；
+    /// 并且该洞的「形状清单」里必须还有匹配的形状条目（2026-10-25 用户设计）：
+    /// 清单由生成洞时切出的灵石形状组成，放置消耗条目、取下归还，清单耗尽即拼满。
+    /// 同形状的灵石可以互换（不校验来源洞）。
     /// </summary>
     public static class MatchChecker
     {
@@ -39,7 +40,11 @@ namespace MendingtheSky
             {
                 return null;
             }
-            // 不再校验来源洞：形状匹配 + 同洞即可，同形状灵石可互换使用
+            // 形状清单校验：目标洞必须还有这个形状的条目（同形状可互换；冗余替补也可用）
+            if (hole != null && !hole.HasShapeEntry(ls.GetShapeSignature()))
+            {
+                return null;
+            }
             return hole;
         }
 

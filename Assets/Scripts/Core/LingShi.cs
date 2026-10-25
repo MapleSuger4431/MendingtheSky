@@ -72,6 +72,9 @@ namespace MendingtheSky
         /// <summary>形状的基础格（未旋转）。可解性校验用：求解器会自行尝试 4 种旋转。</summary>
         public List<Vector2Int> GetBaseCells() { return shape != null ? shape.GetBaseCells() : new List<Vector2Int>(); }
 
+        /// <summary>形状的规范化签名（旋转/平移无关），用于洞口形状清单匹配。</summary>
+        public string GetShapeSignature() { return ShapeCutter.GetCanonicalSignature(GetBaseCells()); }
+
         /// <summary>设置本灵石的独立排序基准（轮廓=base，填充=base+1）。</summary>
         public void SetSortingBase(int value)
         {

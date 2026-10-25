@@ -47,6 +47,8 @@ namespace MendingtheSky
                 maxPiecesPerHole, random);
             foreach (List<Vector2Int> cells in pieces)
             {
+                // 为每块必需灵石在洞口登记形状条目：放置时按清单消耗
+                hole.AddShapeEntry(cells);
                 CreateLingShi(levelConfig, cells, GetSpawnPosition(), hole.GetHoleId());
             }
         }
@@ -226,23 +228,6 @@ namespace MendingtheSky
             return ls;
         }
 
-        /// <summary>
-        /// 死局修复：为指定洞口的剩余格子重新切一批灵石并投放到背篓。
-        /// 用于「灵石可跨洞互换 + 闭合销毁」导致的形状缺失兜底（GameManager.EnsureHolesSolvable 调用）。
-        /// </summary>
-        public void SupplyPiecesForCells(List<Vector2Int> cells, int sourceHoleId, LevelConfig levelConfig)
-        {
-            if (cells == null || cells.Count == 0 || shapePoolConfig == null)
-            {
-                return;
-            }
-            List<List<Vector2Int>> pieces = ShapeCutter.Cut(cells, shapePoolConfig, maxPiecesPerHole, random);
-            foreach (List<Vector2Int> pieceCells in pieces)
-            {
-                CreateLingShi(levelConfig, pieceCells, GetSpawnPosition(), sourceHoleId);
-            }
-        }
-
         private Vector3 GetSpawnPosition()
         {
             Vector3 pos = basketSpawnPoint != null ? basketSpawnPoint.position : transform.position;
@@ -258,7 +243,11 @@ namespace MendingtheSky
             ls.SetVelocity(new Vector2(((float)random.NextDouble() - 0.5f) * 0.4f, 0f));
         }
 
-        /// <summary>冗余补给：可用数量低于阈值时补 redundantCount 块随机形状。</summary>
+        /// <summary>
+        /// 冗余补给：可用数量低于阈值时补 redundantCount 块。
+        /// 形状从「开放洞口的剩余形状清单」中抽取（同形状替补）：
+        /// 这样冗余灵石一定能用上，且不会产生无法匹配任何清单的垃圾形状。
+        /// </summary>
         private void TryAddRedundant(LevelConfig levelConfig)
         {
             if (GetAvailableCount() >= levelConfig.GetRedundantThreshold())
@@ -267,12 +256,34 @@ namespace MendingtheSky
             }
             for (int i = 0; i < levelConfig.GetRedundantCount(); i++)
             {
-                List<Vector2Int> cells = PickRandomShapeCells();
+                List<Vector2Int> cells = PickShapeFromOpenHoles();
                 if (cells != null)
                 {
                     CreateLingShi(levelConfig, cells, GetSpawnPosition());
                 }
             }
+        }
+
+        /// <summary>从所有开放洞的剩余形状清单中随机取一个形状；没有清单时退回形状池随机。</summary>
+        private List<Vector2Int> PickShapeFromOpenHoles()
+        {
+            if (gridManager != null)
+            {
+                var candidates = new List<List<Vector2Int>>();
+                foreach (Hole hole in gridManager.GetAllHoles())
+                {
+                    if (hole.IsClosing())
+                    {
+                        continue;
+                    }
+                    candidates.AddRange(hole.GetRemainingShapeEntries());
+                }
+                if (candidates.Count > 0)
+                {
+                    return new List<Vector2Int>(candidates[random.Next(candidates.Count)]);
+                }
+            }
+            return PickRandomShapeCells();
         }
 
         private List<Vector2Int> PickRandomShapeCells()

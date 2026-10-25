@@ -559,18 +559,21 @@ namespace MendingtheSky
             ls.MarkPlaced(placed);
             if (targetHole != null)
             {
+                // 消耗一个匹配的形状条目（清单耗尽 ⇔ 洞拼满）
+                targetHole.ConsumeShapeEntry(ls.GetShapeSignature());
                 targetHole.AddLingShi(ls);
                 CheckHoleClosed(targetHole);
             }
         }
 
-        /// <summary>从网格取下灵石：已填格恢复为缺口（grid=0），回退洞的填充进度并取消登记。</summary>
+        /// <summary>从网格取下灵石：已填格恢复为缺口（grid=0），回退洞的填充进度、取消登记并归还形状条目。</summary>
         public void UnfillCells(LingShi ls)
         {
             if (ls == null)
             {
                 return;
             }
+            Hole placedHole = null;
             foreach (Vector2Int cell in ls.GetPlacedCells())
             {
                 if (!IsInside(cell.x, cell.y))
@@ -582,9 +585,18 @@ namespace MendingtheSky
                     continue;
                 }
                 Hole hole = GetHoleAt(cell.x, cell.y);
+                if (placedHole == null)
+                {
+                    placedHole = hole;
+                }
                 hole?.NotifyCellUnfilled();
                 hole?.RemoveLingShi(ls);
                 grid[cell.x, cell.y] = CellHole;
+            }
+            if (placedHole != null)
+            {
+                // 归还形状条目：取下后清单恢复，其他同形状灵石可以再放到这个位置
+                placedHole.RestoreShapeEntry(ls.GetBaseCells());
             }
         }
 
