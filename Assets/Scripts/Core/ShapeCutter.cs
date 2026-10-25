@@ -43,7 +43,7 @@ namespace MendingtheSky
             var remaining = new List<Vector2Int>(holeCells);
             var remainingSet = new HashSet<Vector2Int>(holeCells);
             var result = new List<List<Vector2Int>>();
-            List<List<Vector2Int>> variants = BuildVariants(shapePool);
+            var variants = BuildVariants(shapePool, rng);
             if (variants.Count == 0)
             {
                 // 形状池为空：全部退化为单格
@@ -71,7 +71,13 @@ namespace MendingtheSky
 
                 for (int k = 0; k < variants.Count && !placed; k++)
                 {
-                    List<Vector2Int> variant = variants[k];
+                    var variantEntry = variants[k];
+                    // 低权重形状按概率跳过（权重 0.25 ≈ 75% 直接跳过），真正降低出现率
+                    if (variantEntry.weight < 0.999f && rng.NextDouble() > variantEntry.weight)
+                    {
+                        continue;
+                    }
+                    List<Vector2Int> variant = variantEntry.cells;
                     foreach (Vector2Int alignCell in variant)
                     {
                         if (!CanPlaceAligned(variant, alignCell, anchor, remainingSet))
@@ -283,10 +289,14 @@ namespace MendingtheSky
             return false;
         }
 
-        /// <summary>展开形状池的 4 种旋转（去重），并按权重重复条目实现加权。</summary>
-        private static List<List<Vector2Int>> BuildVariants(ShapePoolConfig shapePool)
+        /// <summary>
+        /// 展开形状池的 4 种旋转（保留旋转差异），并按权重排序：
+        /// 大形状优先；同尺寸内做加权随机洗牌（权重越低越靠后 → 被选中的概率越低）。
+        /// 这样「十字」等低权重形状只会在其他同尺寸形状放不下时才被尝试。
+        /// </summary>
+        private static List<(List<Vector2Int> cells, float weight)> BuildVariants(ShapePoolConfig shapePool, System.Random rng)
         {
-            var variants = new List<List<Vector2Int>>();
+            var items = new List<(List<Vector2Int> cells, float weight)>();
             var seen = new HashSet<string>();
             foreach (ShapeEntry entry in shapePool.GetShapes())
             {
@@ -294,7 +304,7 @@ namespace MendingtheSky
                 {
                     continue;
                 }
-                int repeat = Mathf.Clamp(Mathf.RoundToInt(entry.weight), 1, 5);
+                float weight = Mathf.Max(0.01f, entry.weight);
                 for (int r = 0; r < 4; r++)
                 {
                     var rotated = new List<Vector2Int>(entry.cells);
@@ -307,14 +317,50 @@ namespace MendingtheSky
                     {
                         continue;
                     }
-                    for (int i = 0; i < repeat; i++)
-                    {
-                        variants.Add(rotated);
-                    }
+                    items.Add((rotated, weight));
                 }
             }
-            // 大形状优先：先尝试覆盖更多格子，显著减少单格碎块
-            variants.Sort((a, b) => b.Count.CompareTo(a.Count));
+
+            // 尺寸降序；同尺寸内加权随机洗牌
+            items.Sort((a, b) => b.cells.Count.CompareTo(a.cells.Count));
+            int index = 0;
+            while (index < items.Count)
+            {
+                int end = index;
+                while (end < items.Count && items[end].cells.Count == items[index].cells.Count)
+                {
+                    end++;
+                }
+                for (int k = end - 1; k > index; k--)
+                {
+                    float total = 0f;
+                    for (int t = index; t <= k; t++)
+                    {
+                        total += items[t].weight;
+                    }
+                    float roll = (float)(rng.NextDouble() * total);
+                    int pick = k;
+                    for (int t = index; t <= k; t++)
+                    {
+                        roll -= items[t].weight;
+                        if (roll <= 0f)
+                        {
+                            pick = t;
+                            break;
+                        }
+                    }
+                    var tmp = items[pick];
+                    items[pick] = items[k];
+                    items[k] = tmp;
+                }
+                index = end;
+            }
+
+            var variants = new List<(List<Vector2Int> cells, float weight)>(items.Count);
+            foreach (var item in items)
+            {
+                variants.Add(item);
+            }
             return variants;
         }
 

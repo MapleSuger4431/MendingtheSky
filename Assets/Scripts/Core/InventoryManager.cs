@@ -293,7 +293,7 @@ namespace MendingtheSky
             {
                 return new List<Vector2Int> { Vector2Int.zero };
             }
-            ShapeEntry entry = shapes[random.Next(shapes.Count)];
+            ShapeEntry entry = PickWeightedEntry(shapes);
             if (entry == null || entry.cells == null || entry.cells.Count == 0)
             {
                 return new List<Vector2Int> { Vector2Int.zero };
@@ -305,6 +305,37 @@ namespace MendingtheSky
                 cells = Rotate90(cells);
             }
             return cells;
+        }
+
+        /// <summary>按权重随机挑选形状条目（权重越低出现越少；十字等挑战形状用低权重）。</summary>
+        private ShapeEntry PickWeightedEntry(List<ShapeEntry> shapes)
+        {
+            float total = 0f;
+            foreach (ShapeEntry entry in shapes)
+            {
+                if (entry != null && entry.cells != null && entry.cells.Count > 0)
+                {
+                    total += Mathf.Max(0.01f, entry.weight);
+                }
+            }
+            if (total <= 0f)
+            {
+                return shapes[0];
+            }
+            float roll = (float)(random.NextDouble() * total);
+            foreach (ShapeEntry entry in shapes)
+            {
+                if (entry == null || entry.cells == null || entry.cells.Count == 0)
+                {
+                    continue;
+                }
+                roll -= Mathf.Max(0.01f, entry.weight);
+                if (roll <= 0f)
+                {
+                    return entry;
+                }
+            }
+            return shapes[shapes.Count - 1];
         }
 
         private static List<Vector2Int> Rotate90(List<Vector2Int> cells)
