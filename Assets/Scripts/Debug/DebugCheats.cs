@@ -137,34 +137,20 @@ namespace MendingtheSky
                 return;
             }
             List<Hole> holes = gridManager.GetAllHoles();
-            Debug.Log($"[Cheats] ===== 洞口清单诊断（共 {holes.Count} 个洞）=====");
+            Debug.Log($"[Cheats] ===== 洞口清单诊断（共 {holes.Count} 个洞，■=缺口格 ·=实心）=====");
             foreach (Hole hole in holes)
             {
+                List<Vector2Int> cells = hole.GetCells();
                 List<List<Vector2Int>> entries = hole.GetRequiredShapeEntries();
                 int listCells = 0;
-                var counts = new Dictionary<string, int>();
                 foreach (List<Vector2Int> entry in entries)
                 {
                     listCells += entry.Count;
-                    string name = ShapeDescriber.Describe(entry);
-                    counts.TryGetValue(name, out int count);
-                    counts[name] = count + 1;
                 }
-                var parts = new List<string>();
-                foreach (KeyValuePair<string, int> kv in counts)
-                {
-                    parts.Add(kv.Value > 1 ? $"{kv.Key}×{kv.Value}" : kv.Key);
-                }
-                string listText = parts.Count > 0 ? string.Join("、", parts) : "（无清单）";
 
-                // CanTile：这套清单是否恰好能铺满整个洞（洞格数 = 清单格数时的完全覆盖问题）
                 string solvable = entries.Count == 0
                     ? "未登记清单，跳过"
-                    : (ShapeCutter.CanTile(hole.GetCells(), entries) ? "可解" : "不可解");
-
-                string cellWarn = entries.Count > 0 && listCells != hole.GetRequiredCellCount()
-                    ? $"  ⚠ 清单格数({listCells}) ≠ 洞格数({hole.GetRequiredCellCount()})，可能被重复切石登记"
-                    : string.Empty;
+                    : (ShapeCutter.CanTile(cells, entries) ? "可解" : "不可解");
 
                 int ownPieces = 0;
                 if (inventoryManager != null)
@@ -178,10 +164,49 @@ namespace MendingtheSky
                     }
                 }
 
-                Debug.Log($"[Cheats] 洞#{hole.GetHoleId()}：{hole.GetRequiredCellCount()} 格 | " +
-                          $"已填 {hole.GetNowCellCount()} 格、已放 {hole.GetPlacedLingShi().Count} 块 | " +
-                          $"清单 {entries.Count} 条 / {listCells} 格：{listText} | " +
-                          $"CanTile={solvable} | 存世本洞灵石 {ownPieces} 块{cellWarn}");
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"洞#{hole.GetHoleId()}：{cells.Count} 格 | 已填 {hole.GetNowCellCount()} 格、" +
+                              $"已放 {hole.GetPlacedLingShi().Count} 块 | CanTile={solvable} | 存世本洞灵石 {ownPieces} 块");
+                AppendShapeDraw(sb, cells, "  ");
+                sb.AppendLine($"  清单 {entries.Count} 条 / {listCells} 格：");
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    sb.AppendLine($"    [{i + 1}] {ShapeDescriber.Describe(entries[i])}（{entries[i].Count} 格）");
+                    AppendShapeDraw(sb, entries[i], "       ");
+                }
+                if (entries.Count > 0 && listCells != cells.Count)
+                {
+                    sb.AppendLine($"  ⚠ 清单格数({listCells}) ≠ 洞格数({cells.Count})，可能被重复切石登记");
+                }
+                Debug.Log("[Cheats]\n" + sb);
+            }
+        }
+
+        /// <summary>把一组格子画成字符图（■=形状格，·=包围盒内的空格），便于用眼睛核对形状。</summary>
+        private static void AppendShapeDraw(System.Text.StringBuilder sb, List<Vector2Int> cells, string indent)
+        {
+            if (cells == null || cells.Count == 0)
+            {
+                sb.AppendLine(indent + "（空）");
+                return;
+            }
+            int minRow = int.MaxValue, maxRow = int.MinValue, minCol = int.MaxValue, maxCol = int.MinValue;
+            foreach (Vector2Int cell in cells)
+            {
+                if (cell.x < minRow) minRow = cell.x;
+                if (cell.x > maxRow) maxRow = cell.x;
+                if (cell.y < minCol) minCol = cell.y;
+                if (cell.y > maxCol) maxCol = cell.y;
+            }
+            var set = new HashSet<Vector2Int>(cells);
+            for (int r = minRow; r <= maxRow; r++)
+            {
+                sb.Append(indent);
+                for (int c = minCol; c <= maxCol; c++)
+                {
+                    sb.Append(set.Contains(new Vector2Int(r, c)) ? "■" : "·");
+                }
+                sb.AppendLine();
             }
         }
     }

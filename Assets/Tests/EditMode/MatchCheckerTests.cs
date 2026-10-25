@@ -229,5 +229,39 @@ namespace MendingtheSky.Tests
             Assert.AreEqual(PreviewHint.Invalid,
                 MatchChecker.GetPreviewHint(piece, normal.x, normal.y, gridManager));
         }
+
+        [Test]
+        public void GetPreviewHint_QuotaUsedUp_StillValid()
+        {
+            // 2026-10-25 定稿：绿色只看「这个形状是否属于本洞清单」，不看剩余数量；
+            // 数量超出由洞口填满时的 MatchesPlacedShapes 负责报错。
+            Hole hole = gridManager.GetAllHoles()[0];
+            List<Vector2Int> pair = FindAdjacentPair(hole);
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+
+            LingShi alreadyPlaced = CreatePiece(
+                new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, hole.GetHoleId());
+            hole.AddLingShi(alreadyPlaced); // 模拟已放一块：清单的那一条已被抵扣
+
+            LingShi another = CreatePiece(
+                new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, hole.GetHoleId());
+            Assert.AreEqual(PreviewHint.Valid,
+                MatchChecker.GetPreviewHint(another, pair[0].x, pair[0].y, gridManager),
+                "同形状再来一块，清单里仍有这个形状 → 仍是绿色");
+        }
+
+        [Test]
+        public void GetPreviewHint_RedundantPiece_AlwaysValid()
+        {
+            // 冗余补给灵石（sourceHoleId == -1）没有来源洞，可以顶任意位置 → 绿色
+            Hole hole = gridManager.GetAllHoles()[0];
+            List<Vector2Int> pair = FindAdjacentPair(hole);
+            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero }); // 清单里没有二连
+            LingShi redundant = CreatePiece(
+                new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, -1);
+            Assert.AreEqual(PreviewHint.Valid,
+                MatchChecker.GetPreviewHint(redundant, pair[0].x, pair[0].y, gridManager),
+                "冗余灵石不参与清单校验，应为绿色");
+        }
     }
 }
