@@ -57,6 +57,9 @@ namespace MendingtheSky
         public int redundantCount = 2;
         public int redundantThreshold = 4;
         public int potMaxCount = 3;
+        [Range(0f, 1f)]
+        [Tooltip("初始灵石带随机朝向的概率（仅对旋转后形态不同的形状生效；0=全部正向，1=全部随机）")]
+        public float initialRotationChance = 0.4f;
 
         [Header("灵石种类池（权重随机，阶段2接入）")]
         public LingShiTypeEntry[] lingShiTypePool;
@@ -86,6 +89,7 @@ namespace MendingtheSky
         public int GetRedundantCount() { return redundantCount; }
         public int GetRedundantThreshold() { return redundantThreshold; }
         public int GetPotMaxCount() { return potMaxCount; }
+        public float GetInitialRotationChance() { return initialRotationChance; }
         public LingShiTypeEntry[] GetLingShiTypePool() { return lingShiTypePool; }
     }
 }

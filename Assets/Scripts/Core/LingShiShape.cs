@@ -56,6 +56,39 @@ namespace MendingtheSky
             return baseCells.Count;
         }
 
+        /// <summary>
+        /// 旋转是否会改变形状的格子集合（以锚点 (0,0) 为基准）。
+        /// 单格等旋转不变形返回 false —— 这种形状不需要初始随机朝向。
+        /// </summary>
+        public bool HasDistinctRotations()
+        {
+            if (rotations == null || rotations.Count < 2)
+            {
+                return false;
+            }
+            string baseSignature = GetSignature(rotations[0]);
+            for (int i = 1; i < rotations.Count; i++)
+            {
+                if (GetSignature(rotations[i]) != baseSignature)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static string GetSignature(List<Vector2Int> cells)
+        {
+            var copy = new List<Vector2Int>(cells);
+            copy.Sort((a, b) => a.x != b.x ? a.x - b.x : a.y - b.y);
+            var sb = new System.Text.StringBuilder();
+            foreach (Vector2Int cell in copy)
+            {
+                sb.Append(cell.x).Append(',').Append(cell.y).Append(';');
+            }
+            return sb.ToString();
+        }
+
         public LingShiShape Clone()
         {
             var clone = new LingShiShape();

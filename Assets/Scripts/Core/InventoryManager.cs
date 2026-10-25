@@ -206,8 +206,11 @@ namespace MendingtheSky
             }
             var shape = new LingShiShape();
             shape.Init(cells);
-            // 初始朝向随机（0~3 步）：玩家需要旋转才能拼入，旋转机制才有意义
-            if (randomizeInitialRotation)
+            // 初始朝向：按关卡概率随机，且只对「旋转后形态不同」的形状生效。
+            // 单格等旋转不变形没有随机旋转的意义；概率由 LevelConfig.initialRotationChance 控制。
+            if (randomizeInitialRotation
+                && shape.HasDistinctRotations()
+                && random.NextDouble() < levelConfig.GetInitialRotationChance())
             {
                 shape.SetRotationSteps(random.Next(4));
             }

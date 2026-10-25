@@ -33,10 +33,11 @@ MonoBehaviour:
   mergeChance: 0.3
   holeSpawnInterval: 5
   initialQi: 120
-  qiPerCellPerSecond: 0.04
+  qiPerCellPerSecond: 0.03
   redundantCount: 2
   redundantThreshold: 4
   potMaxCount: 3
+  initialRotationChance: 0.4
   lingShiTypePool:
   - typeConfig: {fileID: 11400000, guid: db5d1f67c4530cd4a8dcef3428e0beab, type: 2}
     weight: 1
