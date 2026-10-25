@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace MendingtheSky.Tests
@@ -7,6 +8,7 @@ namespace MendingtheSky.Tests
     /// <summary>
     /// 阶段 5 洞口闭合流程测试（无 GridVisual 时立即结算，便于纯逻辑验证）：
     /// 填满 → 自动进入闭合 → 结算后洞被移除、格子恢复为 -1。
+    /// 2026-10-25 定稿：愈合只看是否填满，灵石按来源洞决定销毁或退回背篓。
     /// </summary>
     public class ClosingFlowTests
     {
@@ -62,15 +64,29 @@ namespace MendingtheSky.Tests
             cleanup.Clear();
         }
 
-        private LingShi CreateMonomino()
+        private LingShi CreateMonomino(int sourceHoleId = -1)
         {
             var go = new GameObject("Monomino_ClosingTest");
+            cleanup.Add(go);
             var ls = go.AddComponent<LingShi>();
             var shape = new LingShiShape();
             shape.Init(new List<Vector2Int> { Vector2Int.zero });
             ls.Init(typeConfig, shape, Vector3.zero, 1f, 1f);
+            ls.SetSourceHoleId(sourceHoleId);
             ls.SetState(LingShiState.Cooked);
             return ls;
+        }
+
+        /// <summary>创建背篓并接到 GridManager（inventoryManager 是 private [SerializeField]）。</summary>
+        private InventoryManager CreateInventory()
+        {
+            var go = new GameObject("Inventory_ClosingTest");
+            cleanup.Add(go);
+            var inventory = go.AddComponent<InventoryManager>();
+            var so = new SerializedObject(grid);
+            so.FindProperty("inventoryManager").objectReferenceValue = inventory;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return inventory;
         }
 
         [Test]
@@ -108,12 +124,13 @@ namespace MendingtheSky.Tests
         }
 
         [Test]
-        public void FullButShapeMismatch_DoesNotHeal()
+        public void FullWithShapeMismatch_StillHeals()
         {
-            // 洞满但形状组合不符合需求清单 → 不愈合（保留现场供玩家重摆）
+            // 填满即愈合：即使已放形状与切出清单不符（借用别的形状拼满），也正常愈合
             Hole hole = grid.GetAllHoles()[0];
             var cells = hole.GetCells();
-            // 需求清单登记为「一块 domino」，但玩家用单格填满
+            int holeId = hole.GetHoleId();
+            // 需求清单登记为「一块 domino」，实际上用单格填满
             hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
 
             foreach (Vector2Int cell in cells)
@@ -121,9 +138,7 @@ namespace MendingtheSky.Tests
                 grid.FillCells(CreateMonomino(), cell.x, cell.y);
             }
 
-            Assert.IsTrue(hole.IsFull());
-            Assert.IsFalse(hole.IsClosing(), "形状不符时不应进入闭合");
-            Assert.IsNotNull(grid.GetHoleById(hole.GetHoleId()), "形状不符时洞应保留");
+            Assert.IsNull(grid.GetHoleById(holeId), "填满即愈合，不看形状组合");
         }
 
         [Test]
@@ -132,6 +147,7 @@ namespace MendingtheSky.Tests
             // 需求清单与放置形状一致 → 正常愈合
             Hole hole = grid.GetAllHoles()[0];
             var cells = hole.GetCells();
+            int holeId = hole.GetHoleId();
             foreach (Vector2Int _ in cells)
             {
                 hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero });
@@ -142,7 +158,58 @@ namespace MendingtheSky.Tests
                 grid.FillCells(CreateMonomino(), cell.x, cell.y);
             }
 
-            Assert.IsNull(grid.GetHoleById(hole.GetHoleId()), "形状一致时应愈合移除");
+            Assert.IsNull(grid.GetHoleById(holeId), "形状一致时应愈合移除");
+        }
+
+        [Test]
+        public void OwnLingShi_IsConsumed_WhenHoleHeals()
+        {
+            // 方案 A：本洞自己切出的灵石在愈合时被销毁
+            InventoryManager inventory = CreateInventory();
+            Hole hole = grid.GetAllHoles()[0];
+            int holeId = hole.GetHoleId();
+
+            var pieces = new List<LingShi>();
+            foreach (Vector2Int cell in hole.GetCells())
+            {
+                LingShi piece = CreateMonomino(holeId);
+                pieces.Add(piece);
+                grid.FillCells(piece, cell.x, cell.y);
+            }
+
+            Assert.IsNull(grid.GetHoleById(holeId), "洞应已愈合");
+            Assert.AreEqual(0, inventory.GetAll().Count, "本洞灵石被销毁，不该退回背篓");
+            foreach (LingShi piece in pieces)
+            {
+                Assert.IsTrue(piece == null, "本洞自己的灵石应被销毁");
+            }
+        }
+
+        [Test]
+        public void BorrowedLingShi_IsReturnedToBasket_WhenHoleHeals()
+        {
+            // 方案 A：其它洞来源的灵石不销毁，退回背篓并保持已煮
+            InventoryManager inventory = CreateInventory();
+            List<Hole> holes = grid.GetAllHoles();
+            Hole closingHole = holes[0];
+            int closingHoleId = closingHole.GetHoleId();
+            int sourceHoleId = holes[1].GetHoleId();
+
+            var pieces = new List<LingShi>();
+            foreach (Vector2Int cell in closingHole.GetCells())
+            {
+                LingShi piece = CreateMonomino(sourceHoleId);
+                pieces.Add(piece);
+                grid.FillCells(piece, cell.x, cell.y);
+            }
+
+            Assert.IsNull(grid.GetHoleById(closingHoleId), "洞应已愈合");
+            Assert.AreEqual(pieces.Count, inventory.GetAll().Count, "借来的灵石应全部退回背篓");
+            foreach (LingShi piece in pieces)
+            {
+                Assert.IsTrue(piece != null, "借来的灵石不应被销毁");
+                Assert.AreEqual(LingShiState.Cooked, piece.GetState(), "退回背篓后应保持已煮");
+            }
         }
     }
 }
