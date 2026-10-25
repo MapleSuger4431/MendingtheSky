@@ -51,6 +51,18 @@ namespace MendingtheSky
                 hole.AddRequiredShapeEntry(cells);
                 CreateLingShi(levelConfig, cells, GetSpawnPosition(), hole.GetHoleId());
             }
+            // 诊断日志（2026-10-25 排查「愈合后凭空多出未熬煮灵石」）：
+            // 新建灵石的初始状态是 InBasket（未熬煮），这是背篓里唯一会出现「未熬煮新块」的来源；
+            // 清单总格数超过洞格数说明同一个洞被重复切石登记过。
+            List<List<Vector2Int>> entries = hole.GetRequiredShapeEntries();
+            int listCellCount = 0;
+            foreach (List<Vector2Int> entry in entries)
+            {
+                listCellCount += entry.Count;
+            }
+            Debug.Log($"[InventoryManager] 为洞#{hole.GetHoleId()} 切出并投放 {pieces.Count} 块未熬煮灵石" +
+                      $"（洞 {hole.GetRequiredCellCount()} 格；清单 {entries.Count} 条 / {listCellCount} 格；" +
+                      $"背篓共 {lingShiList.Count} 块）");
         }
 
         /// <summary>工作台暂存灵石回落：保持 Cooked 状态，插值缩放回背篓。</summary>

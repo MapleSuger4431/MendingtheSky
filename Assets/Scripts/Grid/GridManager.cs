@@ -100,10 +100,20 @@ namespace MendingtheSky
             {
                 return;
             }
+            // 记录生成前的洞 id：TrySpawnNewHole 有 mergeChance 概率贴到未填洞上并返回该洞，
+            // 此时「洞数不变」，但下面照样会按整个洞重新切石并发到背篓。
+            var existingHoleIds = new HashSet<int>();
+            for (int i = 0; i < holes.Count; i++)
+            {
+                existingHoleIds.Add(holes[i].GetHoleId());
+            }
             Hole newHole = TrySpawnNewHole();
             if (newHole != null)
             {
                 generatedHoleCount++;
+                bool mergedIntoExisting = existingHoleIds.Contains(newHole.GetHoleId());
+                Debug.Log($"[GridManager] 动态补洞：{(mergedIntoExisting ? "并入已有洞" : "新建洞")}#{newHole.GetHoleId()}" +
+                          $"（{newHole.GetRequiredCellCount()} 格，场上洞数 {holes.Count}）");
                 // 动态补洞后立刻发放灵石（阶段 5：由 GridManager 直接通知背篓）
                 if (inventoryManager != null)
                 {
@@ -681,6 +691,7 @@ namespace MendingtheSky
                 return;
             }
             float qiReward = hole.GetQiReward();
+            int destroyedCount = 0;
             foreach (LingShi ls in hole.GetPlacedLingShi())
             {
                 if (ls == null)
@@ -699,7 +710,12 @@ namespace MendingtheSky
                 {
                     DestroyImmediate(ls.gameObject);
                 }
+                destroyedCount++;
             }
+            // 诊断日志（2026-10-25 排查「愈合后凭空多出未熬煮灵石」）：
+            // 愈合只销毁灵石、不退回背篓；若之后背篓多了未熬煮块，来源是补洞发石而不是这里。
+            Debug.Log($"[GridManager] 洞口#{hole.GetHoleId()} 结算：销毁 {destroyedCount} 块灵石（不退回背篓），" +
+                      $"返还灵气 {qiReward:F1}");
             foreach (Vector2Int cell in hole.GetCells())
             {
                 if (IsInside(cell.x, cell.y))
