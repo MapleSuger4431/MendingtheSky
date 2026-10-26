@@ -36,20 +36,33 @@ namespace MendingtheSky
             TryAddRedundant(levelConfig);
         }
 
-        /// <summary>为新洞切出灵石并投放到背篓（阶段 5 动态补洞时调用）。</summary>
+        /// <summary>为新洞切出灵石并投放到背篓（开局生成 / 新建整洞时调用）。</summary>
         public void AddLingShiFromHole(Hole hole, LevelConfig levelConfig)
         {
-            if (hole == null || shapePoolConfig == null)
+            if (hole == null)
             {
                 return;
             }
-            List<List<Vector2Int>> pieces = ShapeCutter.Cut(hole.GetCells(), shapePoolConfig,
-                maxPiecesPerHole, random);
-            foreach (List<Vector2Int> cells in pieces)
+            AddLingShiForCells(hole, hole.GetCells(), levelConfig);
+        }
+
+        /// <summary>
+        /// 只给洞口的这一部分格子切石并登记（合并补洞时调用）。
+        /// 合并后洞已经有清单，若再按整洞切一次会造成「清单格数 &gt; 洞格数」并多发一整套灵石；
+        /// 这里只处理真正新增的格子，清单与背篓数量才对得上。
+        /// </summary>
+        public void AddLingShiForCells(Hole hole, List<Vector2Int> cells, LevelConfig levelConfig)
+        {
+            if (hole == null || cells == null || cells.Count == 0 || shapePoolConfig == null)
+            {
+                return;
+            }
+            List<List<Vector2Int>> pieces = ShapeCutter.Cut(cells, shapePoolConfig, maxPiecesPerHole, random);
+            foreach (List<Vector2Int> piece in pieces)
             {
                 // 为每块必需灵石在洞口登记需求形状（愈合时校验形状组合）
-                hole.AddRequiredShapeEntry(cells);
-                CreateLingShi(levelConfig, cells, GetSpawnPosition(), hole.GetHoleId());
+                hole.AddRequiredShapeEntry(piece);
+                CreateLingShi(levelConfig, piece, GetSpawnPosition(), hole.GetHoleId());
             }
         }
 

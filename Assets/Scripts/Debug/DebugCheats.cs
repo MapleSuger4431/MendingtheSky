@@ -41,16 +41,12 @@ namespace MendingtheSky
 
             if (gridManager != null && Input.GetKeyDown(KeyCode.Space))
             {
-                Hole hole = gridManager.SpawnHoleForDebug();
+                Hole hole = gridManager.SpawnHoleForDebug(); // 内部已按「新增格子」发石
                 if (hole != null)
                 {
                     if (gridVisual != null)
                     {
                         gridVisual.RefreshAll();
-                    }
-                    if (inventoryManager != null && gameManager != null)
-                    {
-                        inventoryManager.AddLingShiFromHole(hole, gameManager.GetLevelConfig());
                     }
                     Debug.Log($"[Cheats] 新洞 #{hole.GetHoleId()}（{hole.GetRequiredCellCount()} 格）");
                 }

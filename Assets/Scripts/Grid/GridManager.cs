@@ -100,7 +100,7 @@ namespace MendingtheSky
             {
                 return;
             }
-            Hole newHole = TrySpawnNewHole();
+            Hole newHole = TrySpawnNewHole(out List<Vector2Int> newCells);
             if (newHole != null)
             {
                 generatedHoleCount++;
@@ -111,10 +111,10 @@ namespace MendingtheSky
                 {
                     gridVisual.RefreshAll();
                 }
-                // 动态补洞后立刻发放灵石（阶段 5：由 GridManager 直接通知背篓）
+                // 只给本次新增的格子发石：合并时若按整洞切，会给已有清单的洞重复登记并多发一整套灵石
                 if (inventoryManager != null)
                 {
-                    inventoryManager.AddLingShiFromHole(newHole, levelConfig);
+                    inventoryManager.AddLingShiForCells(newHole, newCells, levelConfig);
                 }
             }
         }
@@ -124,9 +124,12 @@ namespace MendingtheSky
 
         /// <summary>
         /// 尝试生成一个新洞（含修订版合并规则）。失败返回 null（比如网格几乎被占满）。
+        /// newCells = 本次真正新增的格子：新建洞时是整洞格子；合并时只是被并入的那部分。
+        /// 调用方必须按 newCells 发石，否则合并后会对已有清单的洞重复切石。
         /// </summary>
-        public Hole TrySpawnNewHole()
+        public Hole TrySpawnNewHole(out List<Vector2Int> newCells)
         {
+            newCells = null;
             for (int attempt = 0; attempt < maxSpawnAttempts; attempt++)
             {
                 bool allowTouchUnfilled = random.NextDouble() < levelConfig.GetMergeChance();
@@ -152,16 +155,19 @@ namespace MendingtheSky
                         RemoveHole(newHole);
                         continue;
                     }
+                    // 合并前先记下新增格子（MergeWith 只把格子加进 survivor，absorbed 的列表仍完整）
+                    newCells = new List<Vector2Int>(cells);
                     CommitMerge(mergeTarget, newHole);
                     return mergeTarget;
                 }
+                newCells = new List<Vector2Int>(cells);
                 return newHole;
             }
             return null;
         }
 
         /// <summary>
-        /// 调试入口：等价于 Tick 内的一次成功生成（计数 + 生成）。
+        /// 调试入口：等价于 Tick 内的一次成功生成（计数 + 生成 + 只给新增格子发石）。
         /// 对应文档阶段 1 验证点「手动调 TrySpawnNewHole 能加新洞」。
         /// </summary>
         public Hole SpawnHoleForDebug()
@@ -170,10 +176,14 @@ namespace MendingtheSky
             {
                 return null;
             }
-            Hole newHole = TrySpawnNewHole();
+            Hole newHole = TrySpawnNewHole(out List<Vector2Int> newCells);
             if (newHole != null)
             {
                 generatedHoleCount++;
+                if (inventoryManager != null)
+                {
+                    inventoryManager.AddLingShiForCells(newHole, newCells, levelConfig);
+                }
             }
             return newHole;
         }
@@ -450,7 +460,9 @@ namespace MendingtheSky
                 : Mathf.Min(levelConfig.GetHoleCount(), levelConfig.GetTotalHoles());
             for (int i = 0; i < count; i++)
             {
-                Hole hole = TrySpawnNewHole();
+                // 开局只负责生成洞；发石统一由 InventoryManager.GenerateInitialInventory 按整洞切一次，
+                // 所以这里丢弃 newCells（若发生合并，合并后的洞仍会在之后整洞切石，不会重复）。
+                Hole hole = TrySpawnNewHole(out _);
                 if (hole == null)
                 {
                     break;
