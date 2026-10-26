@@ -207,26 +207,6 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 清单里是否包含这个形状（不看剩余数量）。
-        /// 拖拽预览的绿色判据：只要形状属于本洞清单就绿；数量超出由洞口填满时的 MatchesPlacedShapes 把关。
-        /// </summary>
-        public bool HasShapeInList(string signature)
-        {
-            if (!hasShapeEntries || string.IsNullOrEmpty(signature))
-            {
-                return false;
-            }
-            foreach (List<Vector2Int> entry in requiredShapeEntries)
-            {
-                if (ShapeCutter.GetCanonicalSignature(entry) == signature)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /// <summary>
         /// 洞内「清单里抵扣不到」的非冗余灵石形状（诊断用：这些很可能来自其他洞口）。
         /// </summary>
         public List<List<Vector2Int>> GetUnexpectedShapeEntries()

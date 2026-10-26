@@ -231,23 +231,32 @@ namespace MendingtheSky.Tests
         }
 
         [Test]
-        public void GetPreviewHint_QuotaUsedUp_StillValid()
+        public void GetPreviewHint_QuotaCountsDownWhenPlaced_AndRestoresWhenRemoved()
         {
-            // 2026-10-25 定稿：绿色只看「这个形状是否属于本洞清单」，不看剩余数量；
-            // 数量超出由洞口填满时的 MatchesPlacedShapes 负责报错。
+            // 2026-10-25 定稿：额度 = 清单条目数 − 洞内已放的非冗余同形状块数，实时计算
             Hole hole = gridManager.GetAllHoles()[0];
             List<Vector2Int> pair = FindAdjacentPair(hole);
             hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
-
-            LingShi alreadyPlaced = CreatePiece(
-                new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, hole.GetHoleId());
-            hole.AddLingShi(alreadyPlaced); // 模拟已放一块：清单的那一条已被抵扣
 
             LingShi another = CreatePiece(
                 new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, hole.GetHoleId());
             Assert.AreEqual(PreviewHint.Valid,
                 MatchChecker.GetPreviewHint(another, pair[0].x, pair[0].y, gridManager),
-                "同形状再来一块，清单里仍有这个形状 → 仍是绿色");
+                "还没放时额度为 1 → 绿色");
+
+            // 模拟放入一块同形状：清单那一条被抵扣，额度归零
+            LingShi placedPiece = CreatePiece(
+                new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, hole.GetHoleId());
+            hole.AddLingShi(placedPiece);
+            Assert.AreEqual(PreviewHint.ShapeNotInHole,
+                MatchChecker.GetPreviewHint(another, pair[0].x, pair[0].y, gridManager),
+                "额度用完 → 黄色");
+
+            // 模拟抠出来：额度恢复
+            hole.RemoveLingShi(placedPiece);
+            Assert.AreEqual(PreviewHint.Valid,
+                MatchChecker.GetPreviewHint(another, pair[0].x, pair[0].y, gridManager),
+                "抠出来后额度恢复 → 绿色");
         }
 
         [Test]
