@@ -54,6 +54,20 @@ MonoBehaviour:
       value: "\u65E0\u5C3D\u6A21\u5F0F \xB7 \u5DF2\u8865 {0} \u6D1E"
     - key: ui.endless_result
       value: "\u672C\u5C40 {0} \u6D1E \xB7 \u6700\u9AD8 {1} \u6D1E"
+    - key: menu.title
+      value: "\u5973\u5A32\u8865\u5929"
+    - key: menu.start
+      value: "\u5F00\u59CB\u6E38\u620F"
+    - key: menu.endless
+      value: "\u65E0\u5C3D\u6A21\u5F0F"
+    - key: menu.level_select
+      value: "\u5173\u5361\u9009\u62E9"
+    - key: menu.levels_title
+      value: "\u9009\u62E9\u5173\u5361"
+    - key: ui.next_level
+      value: "\u4E0B\u4E00\u5173"
+    - key: ui.main_menu
+      value: "\u4E3B\u754C\u9762"
   - language: 41
     entries:
     - key: ui.paused
@@ -94,6 +108,20 @@ MonoBehaviour:
       value: "\u7121\u76E1\u6A21\u5F0F \xB7 \u5DF2\u88DC {0} \u6D1E"
     - key: ui.endless_result
       value: "\u672C\u5C40 {0} \u6D1E \xB7 \u6700\u9AD8 {1} \u6D1E"
+    - key: menu.title
+      value: "\u5973\u5AA7\u88DC\u5929"
+    - key: menu.start
+      value: "\u958B\u59CB\u904A\u6232"
+    - key: menu.endless
+      value: "\u7121\u76E1\u6A21\u5F0F"
+    - key: menu.level_select
+      value: "\u95DC\u5361\u9078\u64C7"
+    - key: menu.levels_title
+      value: "\u9078\u64C7\u95DC\u5361"
+    - key: ui.next_level
+      value: "\u4E0B\u4E00\u95DC"
+    - key: ui.main_menu
+      value: "\u4E3B\u4ECB\u9762"
   - language: 10
     entries:
     - key: ui.paused
@@ -134,3 +162,17 @@ MonoBehaviour:
       value: "ENDLESS \xB7 {0} holes"
     - key: ui.endless_result
       value: "This run {0} \xB7 Best {1}"
+    - key: menu.title
+      value: MENDING THE SKY
+    - key: menu.start
+      value: START
+    - key: menu.endless
+      value: ENDLESS
+    - key: menu.level_select
+      value: LEVELS
+    - key: menu.levels_title
+      value: SELECT LEVEL
+    - key: ui.next_level
+      value: NEXT LEVEL
+    - key: ui.main_menu
+      value: MAIN MENU

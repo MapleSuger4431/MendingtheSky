@@ -64,6 +64,32 @@ namespace MendingtheSky
         [Tooltip("显示当前语言的文本，如「语言：简体中文」")]
         [SerializeField] private TextMeshProUGUI languageButtonText;
 
+        [Header("主界面")]
+        [SerializeField] private GameObject menuPanel;
+        [SerializeField] private Button menuStartButton;
+        [SerializeField] private Button menuEndlessButton;
+        [SerializeField] private Button menuLevelSelectButton;
+        [SerializeField] private Button menuLanguageButton;
+        [SerializeField] private TextMeshProUGUI menuLanguageText;
+
+        [Header("关卡选择")]
+        [SerializeField] private GameObject levelSelectPanel;
+        [Tooltip("关卡按钮的父物体（建议挂 VerticalLayoutGroup）")]
+        [SerializeField] private Transform levelSelectContent;
+        [Tooltip("关卡按钮模板：会被隐藏，按数据库条目复制")]
+        [SerializeField] private Button levelSelectTemplate;
+        [SerializeField] private Button levelSelectBackButton;
+        [Tooltip("生成关卡列表用的数据库（与 GameManager 指向同一份）")]
+        [SerializeField] private LevelDatabase levelDatabase;
+
+        [Header("结算面板补充按钮")]
+        [Tooltip("胜利面板主按钮的文本（下一关 / 再玩一次）")]
+        [SerializeField] private TextMeshProUGUI winRetryButtonText;
+        [Tooltip("胜利面板：返回主界面")]
+        [SerializeField] private Button winMenuButton;
+        [Tooltip("失败面板：返回主界面")]
+        [SerializeField] private Button loseMenuButton;
+
         [Header("引用")]
         [SerializeField] private GameManager gameManager;
         [SerializeField] private QiManager qiManager;
@@ -143,6 +169,9 @@ namespace MendingtheSky
             {
                 hudPanel.SetActive(true);
             }
+            // 进入关卡时关掉主界面/关卡选择/结算面板
+            HideMenu();
+            HideLevelSelect();
             HidePause();
             HideResult();
             lastLevelId = levelConfig.GetLevelId();
@@ -186,6 +215,122 @@ namespace MendingtheSky
             }
         }
 
+        // ---------------- 主界面 / 关卡选择 ----------------
+
+        /// <summary>显示主界面（启动时、以及从暂停/结算返回时调用）。</summary>
+        public void ShowMenu()
+        {
+            HideLevelSelect();
+            HidePause();
+            HideResult();
+            if (menuPanel != null)
+            {
+                menuPanel.SetActive(true);
+            }
+            RefreshMenuLabels();
+        }
+
+        public void HideMenu()
+        {
+            if (menuPanel != null)
+            {
+                menuPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>显示关卡选择：每次打开都按数据库重新生成按钮。</summary>
+        public void ShowLevelSelect()
+        {
+            HideMenu();
+            PopulateLevelSelect();
+            if (levelSelectPanel != null)
+            {
+                levelSelectPanel.SetActive(true);
+            }
+        }
+
+        public void HideLevelSelect()
+        {
+            if (levelSelectPanel != null)
+            {
+                levelSelectPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// 按 LevelDatabase 生成关卡按钮（模板复制）。普通关显示「第 N 关」，无尽关显示「无尽模式」。
+        /// 每次调用会先清掉上一次生成的按钮，只保留模板本身。
+        /// </summary>
+        public void PopulateLevelSelect()
+        {
+            if (levelSelectContent == null || levelSelectTemplate == null || levelDatabase == null)
+            {
+                return;
+            }
+            for (int i = levelSelectContent.childCount - 1; i >= 0; i--)
+            {
+                Transform child = levelSelectContent.GetChild(i);
+                if (child == levelSelectTemplate.transform)
+                {
+                    continue;
+                }
+                // 先隐藏再 Destroy：Destroy 要到帧末才生效，不隐藏会和新按钮叠一帧
+                child.gameObject.SetActive(false);
+                Destroy(child.gameObject);
+            }
+            levelSelectTemplate.gameObject.SetActive(false);
+
+            for (int i = 0; i < levelDatabase.GetTotalLevels(); i++)
+            {
+                LevelConfig config = levelDatabase.GetLevel(i);
+                if (config == null)
+                {
+                    continue;
+                }
+                int index = i;
+                Button button = Instantiate(levelSelectTemplate, levelSelectContent);
+                button.gameObject.SetActive(true);
+                button.name = $"LevelButton_{i}";
+                TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (label != null)
+                {
+                    // 关卡按钮文案由本方法生成（含关卡 id / 无尽标记），不挂 LocalizedText
+                    LocalizedText existing = label.GetComponent<LocalizedText>();
+                    if (existing != null)
+                    {
+                        Destroy(existing);
+                    }
+                    label.text = FormatLevelEntry(config);
+                }
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(() =>
+                {
+                    HideLevelSelect();
+                    if (gameManager != null)
+                    {
+                        gameManager.StartLevelByIndex(index);
+                    }
+                });
+            }
+        }
+
+        private static string FormatLevelEntry(LevelConfig config)
+        {
+            return config.IsEndless()
+                ? L10n.Get("hud.endless")
+                : L10n.Get("hud.level", config.GetLevelId());
+        }
+
+        /// <summary>刷新主界面上显示当前语言的文本。</summary>
+        private void RefreshMenuLabels()
+        {
+            if (menuLanguageText != null)
+            {
+                menuLanguageText.text = L10n.Get("ui.language",
+                    L10n.GetLanguageDisplayName(L10n.GetCurrentLanguage()));
+            }
+        }
+
         /// <summary>失败结算：显示已填洞数与总洞数。</summary>
         public void ShowLose(int filledHoles, int totalHoles)
         {
@@ -215,6 +360,12 @@ namespace MendingtheSky
                 lastFilledHoles = filledHoles;
                 lastTotalHoles = totalHoles;
                 winText.text = L10n.Get("ui.holes_progress", filledHoles, totalHoles);
+            }
+            if (winRetryButtonText != null)
+            {
+                // 有下一关显示「下一关」，最后一关显示「再玩一次」
+                winRetryButtonText.text = L10n.Get(
+                    gameManager != null && gameManager.HasNextLevel() ? "ui.next_level" : "ui.play_again");
             }
         }
 
@@ -300,9 +451,36 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>暂停面板按钮与设置按钮绑定（继续 / 重开 / 返回 / 预览高亮开关）。</summary>
+        /// <summary>所有按钮绑定：主界面、关卡选择、暂停、结算。</summary>
         private void BindButtons()
         {
+            // 主界面
+            if (menuStartButton != null)
+            {
+                menuStartButton.onClick.AddListener(() => gameManager?.StartGame());
+            }
+            if (menuEndlessButton != null)
+            {
+                menuEndlessButton.onClick.AddListener(() => gameManager?.StartEndless());
+            }
+            if (menuLevelSelectButton != null)
+            {
+                menuLevelSelectButton.onClick.AddListener(ShowLevelSelect);
+            }
+            if (menuLanguageButton != null)
+            {
+                menuLanguageButton.onClick.AddListener(() => L10n.CycleLanguage());
+            }
+            if (levelSelectBackButton != null)
+            {
+                levelSelectBackButton.onClick.AddListener(() =>
+                {
+                    HideLevelSelect();
+                    ShowMenu();
+                });
+            }
+
+            // 暂停面板
             if (resumeButton != null)
             {
                 resumeButton.onClick.AddListener(() => gameManager?.ResumeGame());
@@ -315,14 +493,32 @@ namespace MendingtheSky
             {
                 backToIdleButton.onClick.AddListener(() => gameManager?.BackToIdle());
             }
+
+            // 失败面板
             if (loseRetryButton != null)
             {
                 loseRetryButton.onClick.AddListener(() => gameManager?.RestartLevel());
             }
+            if (loseMenuButton != null)
+            {
+                loseMenuButton.onClick.AddListener(() => gameManager?.BackToIdle());
+            }
+
+            // 胜利面板：有下一关就进下一关，否则重开当前关
             if (winRetryButton != null)
             {
-                winRetryButton.onClick.AddListener(() => gameManager?.RestartLevel());
+                winRetryButton.onClick.AddListener(() =>
+                {
+                    gameManager?.NextLevel();
+                    HideResult();
+                });
             }
+            if (winMenuButton != null)
+            {
+                winMenuButton.onClick.AddListener(() => gameManager?.BackToIdle());
+            }
+
+            // 设置
             if (previewToggleButton != null)
             {
                 previewToggleButton.onClick.AddListener(() =>
@@ -357,6 +553,7 @@ namespace MendingtheSky
         public void RefreshLocalizedTexts()
         {
             RefreshSettingsLabels();
+            RefreshMenuLabels();
             if (levelNameText != null)
             {
                 levelNameText.text = FormatLevelName();
@@ -371,6 +568,11 @@ namespace MendingtheSky
             if (winText != null)
             {
                 winText.text = normalProgress;
+            }
+            if (winRetryButtonText != null)
+            {
+                winRetryButtonText.text = L10n.Get(
+                    gameManager != null && gameManager.HasNextLevel() ? "ui.next_level" : "ui.play_again");
             }
             if (languageButtonText != null)
             {

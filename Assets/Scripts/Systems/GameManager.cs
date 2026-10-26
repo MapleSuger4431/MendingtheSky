@@ -48,7 +48,8 @@ namespace MendingtheSky
 
         private void Start()
         {
-            StartGame();
+            // 启动进入主界面（Idle），由玩家选择「开始游戏 / 无尽模式 / 关卡选择」
+            BackToIdle();
         }
 
         /// <summary>开始游戏：优先从关卡数据库的第 0 关开始，否则回退到单关引用。</summary>
@@ -65,6 +66,32 @@ namespace MendingtheSky
                 return;
             }
             StartLevel(levelConfig);
+        }
+
+        /// <summary>从数据库里找第一个 isEndless 的关卡并开始（主界面「无尽模式」按钮用）。</summary>
+        public void StartEndless()
+        {
+            if (levelDatabase == null)
+            {
+                Debug.LogWarning("[GameManager] 未配置 levelDatabase，无法进入无尽模式");
+                return;
+            }
+            for (int i = 0; i < levelDatabase.GetTotalLevels(); i++)
+            {
+                LevelConfig config = levelDatabase.GetLevel(i);
+                if (config != null && config.IsEndless())
+                {
+                    StartLevelByIndex(i);
+                    return;
+                }
+            }
+            Debug.LogWarning("[GameManager] 关卡数据库里没有 isEndless 的关卡");
+        }
+
+        /// <summary>当前关之后是否还有关卡（胜利面板据此显示「下一关」或「再玩一次」）。</summary>
+        public bool HasNextLevel()
+        {
+            return levelDatabase != null && currentLevelIndex + 1 < levelDatabase.GetTotalLevels();
         }
 
         /// <summary>
@@ -180,6 +207,12 @@ namespace MendingtheSky
         public void RestartLevel()
         {
             Time.timeScale = 1f;
+            if (levelConfig == null)
+            {
+                // 还没开始过任何关卡（例如停在主界面）时，重开等于回主界面
+                BackToIdle();
+                return;
+            }
             StartLevel(levelConfig);
         }
 
@@ -198,13 +231,18 @@ namespace MendingtheSky
         /// <summary>当前关卡在数据库中的索引（单关模式恒为 0）。</summary>
         public int GetCurrentLevelIndex() { return currentLevelIndex; }
 
-        /// <summary>返回主界面（原型无主界面：回到 Idle 并隐藏界面，等待外部重新开始）。</summary>
+        /// <summary>返回主界面：清理运行时状态、隐藏游戏 UI、显示主菜单。</summary>
         public void BackToIdle()
         {
             Time.timeScale = 1f;
             SetState(GameState.Idle);
+            if (dragController != null)
+            {
+                dragController.ResetAll();
+            }
             uiManager.HideAllPanels();
             uiManager.HideHUD();
+            uiManager.ShowMenu();
         }
 
         /// <summary>
