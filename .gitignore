@@ -47,3 +47,6 @@ crashlytics-build.properties
 /.codely-cli/
 # Verification screenshots/recordings
 /screenshots/
+# 音频临时素材（中间处理产物，仅本地保留）
+/Assets/Audio/_raw/
+/Assets/Audio/_raw.meta
