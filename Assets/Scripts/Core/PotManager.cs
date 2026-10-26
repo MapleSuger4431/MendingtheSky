@@ -148,9 +148,18 @@ namespace MendingtheSky
         {
             foreach (LingShi ls in potLingShi)
             {
-                if (ls != null)
+                if (ls == null)
+                {
+                    continue;
+                }
+                // EditMode（未播放）下 Unity 不允许 Destroy，必须用 DestroyImmediate，否则单测报错。
+                if (Application.isPlaying)
                 {
                     Destroy(ls.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(ls.gameObject);
                 }
             }
             potLingShi.Clear();

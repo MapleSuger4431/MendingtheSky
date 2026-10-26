@@ -42,21 +42,23 @@ namespace MendingtheSky.Tests
             pool.shapes.Add(new ShapeEntry { cells = cells.ToList(), weight = 1f });
         }
 
+        /// <summary>
+        /// 校验切割结果。注意：ShapeCutter.Cut 返回的是「相对锚点」坐标（每块都以 (0,0) 为原点），
+        /// 不能直接和洞的绝对坐标比对；这里改用「块格数之和 = 洞格数」+ CanTile 精确铺满校验。
+        /// </summary>
         private static void AssertCoverage(List<Vector2Int> holeCells, List<List<Vector2Int>> pieces)
         {
-            var covered = new HashSet<Vector2Int>();
+            Assert.IsNotNull(pieces, "切割结果不应为 null");
+            int pieceCellCount = 0;
             foreach (List<Vector2Int> piece in pieces)
             {
-                Assert.IsNotEmpty(piece);
-                Assert.IsTrue(piece.Contains(Vector2Int.zero), "每块必须包含锚点 (0,0)");
-                foreach (Vector2Int cell in piece)
-                {
-                    Assert.IsTrue(covered.Add(cell), $"格子 {cell} 被重复覆盖");
-                }
+                Assert.IsNotEmpty(piece, "不允许出现空块");
+                Assert.IsTrue(piece.Contains(Vector2Int.zero), "每块必须以 (0,0) 为锚点");
+                Assert.AreEqual(piece.Count, new HashSet<Vector2Int>(piece).Count, "同一块内不应有重复格");
+                pieceCellCount += piece.Count;
             }
-            var holeSet = new HashSet<Vector2Int>(holeCells);
-            Assert.AreEqual(holeSet.Count, covered.Count, "覆盖格子数与洞不一致");
-            Assert.IsTrue(holeSet.SetEquals(covered), "覆盖格子和洞不一致");
+            Assert.AreEqual(holeCells.Count, pieceCellCount, "块格数之和应等于洞格数");
+            Assert.IsTrue(ShapeCutter.CanTile(holeCells, pieces), "切出的形状应能恰好铺满该洞");
         }
 
         [Test]

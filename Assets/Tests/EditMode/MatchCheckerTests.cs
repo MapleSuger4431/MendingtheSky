@@ -154,13 +154,20 @@ namespace MendingtheSky.Tests
         public void FillAllCells_HoleIsFull()
         {
             Hole hole = gridManager.GetAllHoles()[0];
-            foreach (Vector2Int cell in hole.GetCells())
+            var cells = hole.GetCells();
+            foreach (Vector2Int cell in cells)
             {
                 LingShi single = CreatePiece(new List<Vector2Int> { Vector2Int.zero }, hole.GetHoleId());
                 gridManager.FillCells(single, cell.x, cell.y);
             }
-            Assert.IsTrue(hole.IsFull());
-            Assert.AreEqual(0, gridManager.GetUnfilledCellCount());
+            Assert.IsTrue(hole.IsFull(), "该洞应被填满");
+            // 只校验这个洞的格子：网格上还有别的洞，不能断言「全网格无缺口」。
+            // 无 GridVisual 时填满会立即结算，格子变成 CellNormal(-1)，同样不是 CellHole。
+            foreach (Vector2Int cell in cells)
+            {
+                Assert.AreNotEqual(GridManager.CellHole, gridManager.GetCell(cell.x, cell.y),
+                    $"该洞的格子 {cell} 不应再是缺口");
+            }
         }
 
         [Test]
