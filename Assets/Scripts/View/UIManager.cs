@@ -361,11 +361,11 @@ namespace MendingtheSky
         {
             if (musicSlider != null)
             {
-                musicSlider.SetValueWithoutNotify(Mathf.RoundToInt(GameSettings.MusicVolume * 10f));
+                musicSlider.SetValueWithoutNotify(Mathf.RoundToInt(GameSettings.MusicVolume * 100f));
             }
             if (sfxSlider != null)
             {
-                sfxSlider.SetValueWithoutNotify(Mathf.RoundToInt(GameSettings.SfxVolume * 10f));
+                sfxSlider.SetValueWithoutNotify(Mathf.RoundToInt(GameSettings.SfxVolume * 100f));
             }
             RefreshVolumeLabels();
             if (settingsLanguageText != null)
@@ -576,23 +576,24 @@ namespace MendingtheSky
             }
             if (musicSlider != null)
             {
+                // 0-100 整数档 = 1% 颗粒度；wholeNumbers 保证拖动时落在整数上
                 musicSlider.minValue = 0f;
-                musicSlider.maxValue = 10f;
+                musicSlider.maxValue = 100f;
                 musicSlider.wholeNumbers = true;
                 musicSlider.onValueChanged.AddListener(value =>
                 {
-                    GameSettings.MusicVolume = value / 10f;
+                    GameSettings.MusicVolume = value / 100f;
                     RefreshVolumeLabels();
                 });
             }
             if (sfxSlider != null)
             {
                 sfxSlider.minValue = 0f;
-                sfxSlider.maxValue = 10f;
+                sfxSlider.maxValue = 100f;
                 sfxSlider.wholeNumbers = true;
                 sfxSlider.onValueChanged.AddListener(value =>
                 {
-                    GameSettings.SfxVolume = value / 10f;
+                    GameSettings.SfxVolume = value / 100f;
                     RefreshVolumeLabels();
                 });
             }
