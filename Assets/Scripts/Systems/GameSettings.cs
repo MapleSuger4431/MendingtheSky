@@ -21,11 +21,21 @@ namespace MendingtheSky
         /// <summary>「显示放置预览高亮」的 PlayerPrefs 键。</summary>
         private const string KeyShowPlacementPreview = "settings.showPlacementPreview";
 
-        /// <summary>任意设置变化事件：设置面板与预览系统监听后立即生效。</summary>
+        /// <summary>音乐音量（0-1）的 PlayerPrefs 键。</summary>
+        private const string KeyMusicVolume = "settings.musicVolume";
+
+        /// <summary>音效音量（0-1）的 PlayerPrefs 键。</summary>
+        private const string KeySfxVolume = "settings.sfxVolume";
+
+        private const float DefaultVolume = 0.8f;
+
+        /// <summary>任意设置变化事件：设置面板与预览/音频系统监听后立即生效。</summary>
         public static event Action OnChanged;
 
         /// <summary>缓存，避免每帧读 PlayerPrefs。</summary>
         private static bool? cachedShowPlacementPreview;
+        private static float? cachedMusicVolume;
+        private static float? cachedSfxVolume;
 
         /// <summary>
         /// 是否显示放置预览高亮（默认 true）。
@@ -61,6 +71,56 @@ namespace MendingtheSky
         {
             ShowPlacementPreview = !ShowPlacementPreview;
             return ShowPlacementPreview;
+        }
+
+        /// <summary>音乐音量（0-1，默认 0.8）。写入时立即持久化并广播 OnChanged。</summary>
+        public static float MusicVolume
+        {
+            get
+            {
+                if (!cachedMusicVolume.HasValue)
+                {
+                    cachedMusicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(KeyMusicVolume, DefaultVolume));
+                }
+                return cachedMusicVolume.Value;
+            }
+            set
+            {
+                float clamped = Mathf.Clamp01(value);
+                if (Mathf.Approximately(MusicVolume, clamped))
+                {
+                    return;
+                }
+                cachedMusicVolume = clamped;
+                PlayerPrefs.SetFloat(KeyMusicVolume, clamped);
+                PlayerPrefs.Save();
+                OnChanged?.Invoke();
+            }
+        }
+
+        /// <summary>音效音量（0-1，默认 0.8）。</summary>
+        public static float SfxVolume
+        {
+            get
+            {
+                if (!cachedSfxVolume.HasValue)
+                {
+                    cachedSfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(KeySfxVolume, DefaultVolume));
+                }
+                return cachedSfxVolume.Value;
+            }
+            set
+            {
+                float clamped = Mathf.Clamp01(value);
+                if (Mathf.Approximately(SfxVolume, clamped))
+                {
+                    return;
+                }
+                cachedSfxVolume = clamped;
+                PlayerPrefs.SetFloat(KeySfxVolume, clamped);
+                PlayerPrefs.Save();
+                OnChanged?.Invoke();
+            }
         }
     }
 }

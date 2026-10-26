@@ -68,6 +68,18 @@ MonoBehaviour:
       value: "\u4E0B\u4E00\u5173"
     - key: ui.main_menu
       value: "\u4E3B\u754C\u9762"
+    - key: settings.title
+      value: "\u8BBE\u7F6E"
+    - key: settings.music
+      value: "\u97F3\u4E50"
+    - key: settings.sfx
+      value: "\u97F3\u6548"
+    - key: settings.language
+      value: "\u8BED\u8A00"
+    - key: settings.keybind
+      value: "\u952E\u4F4D\u8BBE\u7F6E\uFF08\u5F85\u5B9A\uFF09"
+    - key: settings.keybind_todo
+      value: "\u952E\u4F4D\u4FEE\u6539\u7A0D\u540E\u5F00\u653E"
   - language: 41
     entries:
     - key: ui.paused
@@ -122,6 +134,18 @@ MonoBehaviour:
       value: "\u4E0B\u4E00\u95DC"
     - key: ui.main_menu
       value: "\u4E3B\u4ECB\u9762"
+    - key: settings.title
+      value: "\u8A2D\u5B9A"
+    - key: settings.music
+      value: "\u97F3\u6A02"
+    - key: settings.sfx
+      value: "\u97F3\u6548"
+    - key: settings.language
+      value: "\u8A9E\u8A00"
+    - key: settings.keybind
+      value: "\u6309\u9375\u8A2D\u5B9A\uFF08\u5F85\u5B9A\uFF09"
+    - key: settings.keybind_todo
+      value: "\u6309\u9375\u4FEE\u6539\u7A0D\u5F8C\u958B\u653E"
   - language: 10
     entries:
     - key: ui.paused
@@ -176,3 +200,15 @@ MonoBehaviour:
       value: NEXT LEVEL
     - key: ui.main_menu
       value: MAIN MENU
+    - key: settings.title
+      value: SETTINGS
+    - key: settings.music
+      value: MUSIC
+    - key: settings.sfx
+      value: SFX
+    - key: settings.language
+      value: LANGUAGE
+    - key: settings.keybind
+      value: KEY BINDING (TBD)
+    - key: settings.keybind_todo
+      value: Key rebinding is coming later

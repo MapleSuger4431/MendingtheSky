@@ -69,8 +69,21 @@ namespace MendingtheSky
         [SerializeField] private Button menuStartButton;
         [SerializeField] private Button menuEndlessButton;
         [SerializeField] private Button menuLevelSelectButton;
-        [SerializeField] private Button menuLanguageButton;
-        [SerializeField] private TextMeshProUGUI menuLanguageText;
+        [Tooltip("主界面「设置」按钮：打开设置面板")]
+        [SerializeField] private Button menuSettingsButton;
+
+        [Header("设置面板")]
+        [SerializeField] private GameObject settingsPanel;
+        [SerializeField] private Slider musicSlider;
+        [SerializeField] private Slider sfxSlider;
+        [SerializeField] private TextMeshProUGUI musicValueText;
+        [SerializeField] private TextMeshProUGUI sfxValueText;
+        [SerializeField] private Button settingsLanguageButton;
+        [SerializeField] private TextMeshProUGUI settingsLanguageText;
+        [SerializeField] private Button settingsKeybindButton;
+        [Tooltip("键位等未开放功能的临时提示文本")]
+        [SerializeField] private TextMeshProUGUI settingsHintText;
+        [SerializeField] private Button settingsBackButton;
 
         [Header("关卡选择")]
         [SerializeField] private GameObject levelSelectPanel;
@@ -97,6 +110,7 @@ namespace MendingtheSky
 
         private bool isWarning;
         private float blinkTimer;
+        private Coroutine hintRoutine;
 
         // 语言切换后需要重算的带参数文本的缓存值
         private int lastLevelId = 1;
@@ -217,17 +231,17 @@ namespace MendingtheSky
 
         // ---------------- 主界面 / 关卡选择 ----------------
 
-        /// <summary>显示主界面（启动时、以及从暂停/结算返回时调用）。</summary>
+        /// <summary>显示主界面（启动时、以及从暂停/结算/设置返回时调用）。</summary>
         public void ShowMenu()
         {
             HideLevelSelect();
+            HideSettings();
             HidePause();
             HideResult();
             if (menuPanel != null)
             {
                 menuPanel.SetActive(true);
             }
-            RefreshMenuLabels();
         }
 
         public void HideMenu()
@@ -321,14 +335,84 @@ namespace MendingtheSky
                 : L10n.Get("hud.level", config.GetLevelId());
         }
 
-        /// <summary>刷新主界面上显示当前语言的文本。</summary>
-        private void RefreshMenuLabels()
+        // ---------------- 设置面板 ----------------
+
+        /// <summary>打开设置面板（从主界面进入）。</summary>
+        public void ShowSettings()
         {
-            if (menuLanguageText != null)
+            HideMenu();
+            if (settingsPanel != null)
             {
-                menuLanguageText.text = L10n.Get("ui.language",
-                    L10n.GetLanguageDisplayName(L10n.GetCurrentLanguage()));
+                settingsPanel.SetActive(true);
             }
+            RefreshSettingsPanel();
+        }
+
+        public void HideSettings()
+        {
+            if (settingsPanel != null)
+            {
+                settingsPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>把当前设置值同步到面板控件（滑块、百分比、语言名）。</summary>
+        public void RefreshSettingsPanel()
+        {
+            if (musicSlider != null)
+            {
+                musicSlider.SetValueWithoutNotify(Mathf.RoundToInt(GameSettings.MusicVolume * 10f));
+            }
+            if (sfxSlider != null)
+            {
+                sfxSlider.SetValueWithoutNotify(Mathf.RoundToInt(GameSettings.SfxVolume * 10f));
+            }
+            RefreshVolumeLabels();
+            if (settingsLanguageText != null)
+            {
+                settingsLanguageText.text = L10n.GetLanguageDisplayName(L10n.GetCurrentLanguage());
+            }
+            if (settingsHintText != null)
+            {
+                settingsHintText.text = string.Empty;
+            }
+        }
+
+        private void RefreshVolumeLabels()
+        {
+            if (musicValueText != null)
+            {
+                musicValueText.text = $"{Mathf.RoundToInt(GameSettings.MusicVolume * 100f)}%";
+            }
+            if (sfxValueText != null)
+            {
+                sfxValueText.text = $"{Mathf.RoundToInt(GameSettings.SfxVolume * 100f)}%";
+            }
+        }
+
+        /// <summary>在设置面板底部显示一条临时提示（例如「键位修改稍后开放」）。</summary>
+        private void ShowSettingsHint(string message)
+        {
+            if (settingsHintText == null)
+            {
+                return;
+            }
+            settingsHintText.text = message;
+            if (hintRoutine != null)
+            {
+                StopCoroutine(hintRoutine);
+            }
+            hintRoutine = StartCoroutine(ClearHintAfter(2f));
+        }
+
+        private System.Collections.IEnumerator ClearHintAfter(float seconds)
+        {
+            yield return new WaitForSecondsRealtime(seconds);
+            if (settingsHintText != null)
+            {
+                settingsHintText.text = string.Empty;
+            }
+            hintRoutine = null;
         }
 
         /// <summary>失败结算：显示已填洞数与总洞数。</summary>
@@ -467,9 +551,50 @@ namespace MendingtheSky
             {
                 menuLevelSelectButton.onClick.AddListener(ShowLevelSelect);
             }
-            if (menuLanguageButton != null)
+            if (menuSettingsButton != null)
             {
-                menuLanguageButton.onClick.AddListener(() => L10n.CycleLanguage());
+                menuSettingsButton.onClick.AddListener(ShowSettings);
+            }
+
+            // 设置面板
+            if (settingsBackButton != null)
+            {
+                settingsBackButton.onClick.AddListener(() =>
+                {
+                    HideSettings();
+                    ShowMenu();
+                });
+            }
+            if (settingsLanguageButton != null)
+            {
+                settingsLanguageButton.onClick.AddListener(() => L10n.CycleLanguage());
+            }
+            if (settingsKeybindButton != null)
+            {
+                settingsKeybindButton.onClick.AddListener(() =>
+                    ShowSettingsHint(L10n.Get("settings.keybind_todo")));
+            }
+            if (musicSlider != null)
+            {
+                musicSlider.minValue = 0f;
+                musicSlider.maxValue = 10f;
+                musicSlider.wholeNumbers = true;
+                musicSlider.onValueChanged.AddListener(value =>
+                {
+                    GameSettings.MusicVolume = value / 10f;
+                    RefreshVolumeLabels();
+                });
+            }
+            if (sfxSlider != null)
+            {
+                sfxSlider.minValue = 0f;
+                sfxSlider.maxValue = 10f;
+                sfxSlider.wholeNumbers = true;
+                sfxSlider.onValueChanged.AddListener(value =>
+                {
+                    GameSettings.SfxVolume = value / 10f;
+                    RefreshVolumeLabels();
+                });
             }
             if (levelSelectBackButton != null)
             {
@@ -553,7 +678,10 @@ namespace MendingtheSky
         public void RefreshLocalizedTexts()
         {
             RefreshSettingsLabels();
-            RefreshMenuLabels();
+            if (settingsLanguageText != null)
+            {
+                settingsLanguageText.text = L10n.GetLanguageDisplayName(L10n.GetCurrentLanguage());
+            }
             if (levelNameText != null)
             {
                 levelNameText.text = FormatLevelName();
