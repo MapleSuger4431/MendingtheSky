@@ -22,9 +22,11 @@
 
 | 路径 | 内容 |
 |---|---|
-| `Assets/Scripts/Config/` | 关卡、形状池、灵石类型等 ScriptableObject 定义 |
-| `Assets/Scripts/Core/` | 数据模型、管理器、输入、UI（当前混放，见架构说明 §9） |
-| `Assets/Scripts/Grid/` | 网格与洞口的系统（`GridManager`）与表现（`GridVisual`） |
+| `Assets/Scripts/Data/` | 关卡、形状池、灵石类型等 ScriptableObject 定义 |
+| `Assets/Scripts/Gameplay/` | 规则与数据模型（`Hole` / `LingShi` / `ShapeCutter` / `MatchChecker`） |
+| `Assets/Scripts/Systems/` | 管理器（`GameManager` / `GridManager` / `InventoryManager` / `PotManager` / `QiManager`） |
+| `Assets/Scripts/View/` | 表现层（`GridVisual` / `UIManager`） |
+| `Assets/Scripts/Input/` | 输入（`DragController`） |
 | `Assets/Scripts/Localization/` | 轻量多语言（`L10n` + 词表 + `LocalizedText`） |
 | `Assets/Scripts/Debug/` | 调试快捷键 `DebugCheats` |
 | `Assets/ScriptableObjects/` | 关卡 `Level01`、形状池、灵石类型、本地化词表 |
