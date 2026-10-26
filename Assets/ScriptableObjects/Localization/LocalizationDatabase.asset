@@ -50,6 +50,10 @@ MonoBehaviour:
       value: "\u7B2C {0} \u5173"
     - key: hud.endless
       value: "\u65E0\u5C3D\u6A21\u5F0F"
+    - key: hud.endless_progress
+      value: "\u65E0\u5C3D\u6A21\u5F0F \xB7 \u5DF2\u8865 {0} \u6D1E"
+    - key: ui.endless_result
+      value: "\u672C\u5C40 {0} \u6D1E \xB7 \u6700\u9AD8 {1} \u6D1E"
   - language: 41
     entries:
     - key: ui.paused
@@ -86,6 +90,10 @@ MonoBehaviour:
       value: "\u7B2C {0} \u95DC"
     - key: hud.endless
       value: "\u7121\u76E1\u6A21\u5F0F"
+    - key: hud.endless_progress
+      value: "\u7121\u76E1\u6A21\u5F0F \xB7 \u5DF2\u88DC {0} \u6D1E"
+    - key: ui.endless_result
+      value: "\u672C\u5C40 {0} \u6D1E \xB7 \u6700\u9AD8 {1} \u6D1E"
   - language: 10
     entries:
     - key: ui.paused
@@ -122,3 +130,7 @@ MonoBehaviour:
       value: LV {0}
     - key: hud.endless
       value: ENDLESS
+    - key: hud.endless_progress
+      value: "ENDLESS \xB7 {0} holes"
+    - key: ui.endless_result
+      value: "This run {0} \xB7 Best {1}"

@@ -220,6 +220,11 @@ namespace MendingtheSky
             }
             qiManager.AddQi(qiReward);
             filledHoleCount++;
+            if (levelConfig != null && levelConfig.IsEndless() && uiManager != null)
+            {
+                // 无尽模式：HUD 上实时显示「已补 N 洞」
+                uiManager.UpdateEndlessProgress(filledHoleCount);
+            }
             CheckWinCondition();
         }
 
@@ -234,6 +239,13 @@ namespace MendingtheSky
             if (dragController != null)
             {
                 dragController.ResetAll(); // 手上/暂存的灵石复位，避免悬空
+            }
+            if (levelConfig != null && levelConfig.IsEndless())
+            {
+                // 无尽模式：分数 = 本局补洞数，顺便写入最高纪录
+                int best = EndlessRecord.Report(filledHoleCount);
+                uiManager.ShowLoseEndless(filledHoleCount, best);
+                return;
             }
             uiManager.ShowLose(filledHoleCount, levelConfig != null ? levelConfig.GetTotalHoles() : 0);
         }

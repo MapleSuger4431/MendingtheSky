@@ -77,6 +77,7 @@ namespace MendingtheSky
         private bool lastIsEndless;
         private int lastFilledHoles;
         private int lastTotalHoles = 1;
+        private int lastEndlessBest;
 
         private void Awake()
         {
@@ -144,11 +145,12 @@ namespace MendingtheSky
             }
             HidePause();
             HideResult();
+            lastLevelId = levelConfig.GetLevelId();
+            lastIsEndless = levelConfig.IsEndless();
+            lastFilledHoles = 0;
             if (levelNameText != null)
             {
-                lastLevelId = levelConfig.GetLevelId();
-                lastIsEndless = levelConfig.IsEndless();
-                levelNameText.text = FormatLevelName(lastIsEndless, lastLevelId);
+                levelNameText.text = FormatLevelName();
             }
             if (statusText != null)
             {
@@ -225,6 +227,32 @@ namespace MendingtheSky
             if (winPanel != null)
             {
                 winPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>无尽模式：每补好一个洞刷新 HUD 上的「已补 N 洞」。</summary>
+        public void UpdateEndlessProgress(int filledHoles)
+        {
+            lastFilledHoles = filledHoles;
+            if (lastIsEndless && levelNameText != null)
+            {
+                levelNameText.text = FormatLevelName();
+            }
+        }
+
+        /// <summary>无尽模式失败结算：本局补洞数与历史最高纪录。</summary>
+        public void ShowLoseEndless(int filledHoles, int best)
+        {
+            HidePause();
+            if (losePanel != null)
+            {
+                losePanel.SetActive(true);
+            }
+            lastFilledHoles = filledHoles;
+            lastEndlessBest = best;
+            if (loseText != null)
+            {
+                loseText.text = L10n.Get("ui.endless_result", filledHoles, best);
             }
         }
 
@@ -331,16 +359,18 @@ namespace MendingtheSky
             RefreshSettingsLabels();
             if (levelNameText != null)
             {
-                levelNameText.text = FormatLevelName(lastIsEndless, lastLevelId);
+                levelNameText.text = FormatLevelName();
             }
-            string progress = L10n.Get("ui.holes_progress", lastFilledHoles, lastTotalHoles);
+            string normalProgress = L10n.Get("ui.holes_progress", lastFilledHoles, lastTotalHoles);
             if (loseText != null)
             {
-                loseText.text = progress;
+                loseText.text = lastIsEndless
+                    ? L10n.Get("ui.endless_result", lastFilledHoles, lastEndlessBest)
+                    : normalProgress;
             }
             if (winText != null)
             {
-                winText.text = progress;
+                winText.text = normalProgress;
             }
             if (languageButtonText != null)
             {
@@ -349,10 +379,12 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>HUD 关卡名：普通关卡显示「第 N 关」，无尽模式显示「无尽模式」。</summary>
-        private static string FormatLevelName(bool isEndless, int levelId)
+        /// <summary>HUD 关卡名：普通关卡「第 N 关」，无尽模式「无尽模式 · 已补 N 洞」。</summary>
+        private string FormatLevelName()
         {
-            return isEndless ? L10n.Get("hud.endless") : L10n.Get("hud.level", levelId);
+            return lastIsEndless
+                ? L10n.Get("hud.endless_progress", lastFilledHoles)
+                : L10n.Get("hud.level", lastLevelId);
         }
     }
 }
