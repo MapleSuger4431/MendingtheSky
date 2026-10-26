@@ -16,7 +16,10 @@ namespace MendingtheSky
     /// </summary>
     public class GameManager : MonoBehaviour
     {
-        [Header("关卡（原型：单关直接引用）")]
+        [Header("关卡（二选一：配置了数据库则优先用数据库）")]
+        [Tooltip("多关卡/无尽模式的入口；为空时回退到下面的单关引用")]
+        [SerializeField] private LevelDatabase levelDatabase;
+        [Tooltip("单关直连（原型模式）；数据库不为空时忽略")]
         [SerializeField] private LevelConfig levelConfig;
 
         [Header("系统引用（全部挂在同一物体或已接线）")]
@@ -35,6 +38,7 @@ namespace MendingtheSky
         [Header("运行时状态（只读）")]
         [SerializeField] private GameState state = GameState.Idle;
         [SerializeField] private int filledHoleCount;
+        [SerializeField] private int currentLevelIndex;
 
         private void Awake()
         {
@@ -47,15 +51,47 @@ namespace MendingtheSky
             StartGame();
         }
 
-        /// <summary>开始游戏：原型直接进入配置的关卡。</summary>
+        /// <summary>开始游戏：优先从关卡数据库的第 0 关开始，否则回退到单关引用。</summary>
         public void StartGame()
         {
+            if (levelDatabase != null && levelDatabase.GetTotalLevels() > 0)
+            {
+                StartLevelByIndex(0);
+                return;
+            }
             if (levelConfig == null)
             {
-                Debug.LogError("[GameManager] levelConfig 未配置，无法开始游戏");
+                Debug.LogError("[GameManager] levelDatabase / levelConfig 都未配置，无法开始游戏");
                 return;
             }
             StartLevel(levelConfig);
+        }
+
+        /// <summary>
+        /// 按关卡数据库索引开始（越界会夹到有效范围）。
+        /// 多关卡与无尽模式都走这里；单关模式仍可直接 StartLevel(config)。
+        /// </summary>
+        public void StartLevelByIndex(int index)
+        {
+            if (levelDatabase == null)
+            {
+                Debug.LogWarning("[GameManager] 未配置 levelDatabase，无法按索引开始关卡");
+                return;
+            }
+            int total = levelDatabase.GetTotalLevels();
+            if (total <= 0)
+            {
+                Debug.LogWarning("[GameManager] levelDatabase 里没有关卡");
+                return;
+            }
+            currentLevelIndex = Mathf.Clamp(index, 0, total - 1);
+            LevelConfig config = levelDatabase.GetLevel(currentLevelIndex);
+            if (config == null)
+            {
+                Debug.LogWarning($"[GameManager] 关卡索引 {currentLevelIndex} 没有对应配置");
+                return;
+            }
+            StartLevel(config);
         }
 
         /// <summary>
@@ -147,11 +183,20 @@ namespace MendingtheSky
             StartLevel(levelConfig);
         }
 
-        /// <summary>下一关（原型单关：等价于重开；关卡数据库接入后改成 index+1）。</summary>
+        /// <summary>下一关：数据库里有下一关就进入，否则重开当前关。</summary>
         public void NextLevel()
         {
-            StartLevel(levelConfig);
+            if (levelDatabase != null && levelDatabase.GetTotalLevels() > 0
+                && currentLevelIndex + 1 < levelDatabase.GetTotalLevels())
+            {
+                StartLevelByIndex(currentLevelIndex + 1);
+                return;
+            }
+            RestartLevel();
         }
+
+        /// <summary>当前关卡在数据库中的索引（单关模式恒为 0）。</summary>
+        public int GetCurrentLevelIndex() { return currentLevelIndex; }
 
         /// <summary>返回主界面（原型无主界面：回到 Idle 并隐藏界面，等待外部重新开始）。</summary>
         public void BackToIdle()

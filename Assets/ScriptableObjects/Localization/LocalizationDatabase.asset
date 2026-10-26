@@ -48,6 +48,8 @@ MonoBehaviour:
       value: English
     - key: hud.level
       value: "\u7B2C {0} \u5173"
+    - key: hud.endless
+      value: "\u65E0\u5C3D\u6A21\u5F0F"
   - language: 41
     entries:
     - key: ui.paused
@@ -82,6 +84,8 @@ MonoBehaviour:
       value: English
     - key: hud.level
       value: "\u7B2C {0} \u95DC"
+    - key: hud.endless
+      value: "\u7121\u76E1\u6A21\u5F0F"
   - language: 10
     entries:
     - key: ui.paused
@@ -116,3 +120,5 @@ MonoBehaviour:
       value: English
     - key: hud.level
       value: LV {0}
+    - key: hud.endless
+      value: ENDLESS

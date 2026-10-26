@@ -74,6 +74,7 @@ namespace MendingtheSky
 
         // 语言切换后需要重算的带参数文本的缓存值
         private int lastLevelId = 1;
+        private bool lastIsEndless;
         private int lastFilledHoles;
         private int lastTotalHoles = 1;
 
@@ -146,7 +147,8 @@ namespace MendingtheSky
             if (levelNameText != null)
             {
                 lastLevelId = levelConfig.GetLevelId();
-                levelNameText.text = L10n.Get("hud.level", lastLevelId);
+                lastIsEndless = levelConfig.IsEndless();
+                levelNameText.text = FormatLevelName(lastIsEndless, lastLevelId);
             }
             if (statusText != null)
             {
@@ -329,7 +331,7 @@ namespace MendingtheSky
             RefreshSettingsLabels();
             if (levelNameText != null)
             {
-                levelNameText.text = L10n.Get("hud.level", lastLevelId);
+                levelNameText.text = FormatLevelName(lastIsEndless, lastLevelId);
             }
             string progress = L10n.Get("ui.holes_progress", lastFilledHoles, lastTotalHoles);
             if (loseText != null)
@@ -345,6 +347,12 @@ namespace MendingtheSky
                 languageButtonText.text = L10n.Get("ui.language",
                     L10n.GetLanguageDisplayName(L10n.GetCurrentLanguage()));
             }
+        }
+
+        /// <summary>HUD 关卡名：普通关卡显示「第 N 关」，无尽模式显示「无尽模式」。</summary>
+        private static string FormatLevelName(bool isEndless, int levelId)
+        {
+            return isEndless ? L10n.Get("hud.endless") : L10n.Get("hud.level", levelId);
         }
     }
 }
