@@ -1,0 +1,118 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91394b08c9c9da5499e9e1caa27ddd6b, type: 3}
+  m_Name: LocalizationDatabase
+  m_EditorClassIdentifier: 
+  defaultLanguage: 40
+  tables:
+  - language: 40
+    entries:
+    - key: ui.paused
+      value: "\u6682\u505C"
+    - key: ui.resume
+      value: "\u7EE7\u7EED"
+    - key: ui.restart
+      value: "\u91CD\u5F00"
+    - key: ui.back
+      value: "\u8FD4\u56DE"
+    - key: ui.retry
+      value: "\u91CD\u8BD5"
+    - key: ui.play_again
+      value: "\u518D\u73A9\u4E00\u6B21"
+    - key: ui.sky_mended
+      value: "\u5929\u7A7A\u8865\u597D\u4E86\uFF01"
+    - key: ui.qi_depleted
+      value: "\u7075\u6C14\u8017\u5C3D\u4E86\u2026"
+    - key: ui.holes_progress
+      value: "\u5DF2\u8865\u7F3A\u53E3 {0} / {1}"
+    - key: ui.preview_on
+      value: "\u653E\u7F6E\u9884\u89C8\uFF1A\u5F00"
+    - key: ui.preview_off
+      value: "\u653E\u7F6E\u9884\u89C8\uFF1A\u5173"
+    - key: ui.language
+      value: "\u8BED\u8A00\uFF1A{0}"
+    - key: lang.zh_cn
+      value: "\u7B80\u4F53\u4E2D\u6587"
+    - key: lang.zh_tw
+      value: "\u7E41\u9AD4\u4E2D\u6587"
+    - key: lang.en
+      value: English
+    - key: hud.level
+      value: "\u7B2C {0} \u5173"
+  - language: 41
+    entries:
+    - key: ui.paused
+      value: "\u66AB\u505C"
+    - key: ui.resume
+      value: "\u7E7C\u7E8C"
+    - key: ui.restart
+      value: "\u91CD\u958B"
+    - key: ui.back
+      value: "\u8FD4\u56DE"
+    - key: ui.retry
+      value: "\u91CD\u8A66"
+    - key: ui.play_again
+      value: "\u518D\u73A9\u4E00\u6B21"
+    - key: ui.sky_mended
+      value: "\u5929\u7A7A\u88DC\u597D\u4E86\uFF01"
+    - key: ui.qi_depleted
+      value: "\u9748\u6C23\u8017\u76E1\u4E86\u2026"
+    - key: ui.holes_progress
+      value: "\u5DF2\u88DC\u7F3A\u53E3 {0} / {1}"
+    - key: ui.preview_on
+      value: "\u653E\u7F6E\u9810\u89BD\uFF1A\u958B"
+    - key: ui.preview_off
+      value: "\u653E\u7F6E\u9810\u89BD\uFF1A\u95DC"
+    - key: ui.language
+      value: "\u8A9E\u8A00\uFF1A{0}"
+    - key: lang.zh_cn
+      value: "\u7B80\u4F53\u4E2D\u6587"
+    - key: lang.zh_tw
+      value: "\u7E41\u9AD4\u4E2D\u6587"
+    - key: lang.en
+      value: English
+    - key: hud.level
+      value: "\u7B2C {0} \u95DC"
+  - language: 10
+    entries:
+    - key: ui.paused
+      value: PAUSED
+    - key: ui.resume
+      value: RESUME
+    - key: ui.restart
+      value: RESTART
+    - key: ui.back
+      value: BACK
+    - key: ui.retry
+      value: RETRY
+    - key: ui.play_again
+      value: PLAY AGAIN
+    - key: ui.sky_mended
+      value: SKY MENDED
+    - key: ui.qi_depleted
+      value: QI DEPLETED
+    - key: ui.holes_progress
+      value: Holes {0} / {1}
+    - key: ui.preview_on
+      value: 'Preview: ON'
+    - key: ui.preview_off
+      value: 'Preview: OFF'
+    - key: ui.language
+      value: 'Language: {0}'
+    - key: lang.zh_cn
+      value: "\u7B80\u4F53\u4E2D\u6587"
+    - key: lang.zh_tw
+      value: "\u7E41\u9AD4\u4E2D\u6587"
+    - key: lang.en
+      value: English
+    - key: hud.level
+      value: LV {0}

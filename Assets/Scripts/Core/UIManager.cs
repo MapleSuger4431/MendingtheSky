@@ -11,10 +11,10 @@ namespace MendingtheSky
     /// - 监听 QiManager 的事件刷新灵气条与数值；
     /// - 低灵气时灵气条变红并做透明度闪烁（使用 unscaledDeltaTime，暂停时也能闪）；
     /// - ESC 切换暂停（移动端后续换成屏幕按钮，见设计文档 2.1）；
-    /// - 绑定暂停面板的三个按钮（继续 / 重开 / 返回）。
+    /// - 绑定暂停面板的按钮（继续 / 重开 / 返回 / 预览开关 / 语言切换）。
     ///
-    /// 说明：本阶段 UI 文本使用英文/数字（TMP 默认字体），
-    /// 中文字体与多语言切换按设计评审第七节在本地化步骤接入。
+    /// 文本：静态文案由场景里的 LocalizedText 组件负责；带参数的（关卡号、结算、语言名、预览开关）
+    /// 由本类用 L10n.Get(key, args) 生成，并在 OnLanguageChanged 时统一刷新。
     /// </summary>
     public class UIManager : MonoBehaviour
     {
@@ -58,6 +58,12 @@ namespace MendingtheSky
         [Tooltip("显示当前预览开关状态的文本")]
         [SerializeField] private TextMeshProUGUI previewToggleText;
 
+        [Header("语言切换（暂停面板）")]
+        [Tooltip("循环切换 简体 → 繁體 → English 的按钮")]
+        [SerializeField] private Button languageButton;
+        [Tooltip("显示当前语言的文本，如「语言：简体中文」")]
+        [SerializeField] private TextMeshProUGUI languageButtonText;
+
         [Header("引用")]
         [SerializeField] private GameManager gameManager;
         [SerializeField] private QiManager qiManager;
@@ -65,6 +71,11 @@ namespace MendingtheSky
 
         private bool isWarning;
         private float blinkTimer;
+
+        // 语言切换后需要重算的带参数文本的缓存值
+        private int lastLevelId = 1;
+        private int lastFilledHoles;
+        private int lastTotalHoles = 1;
 
         private void Awake()
         {
@@ -79,7 +90,8 @@ namespace MendingtheSky
                 qiManager.OnQiWarning += OnQiWarning;
             }
             GameSettings.OnChanged += RefreshSettingsLabels;
-            RefreshSettingsLabels();
+            L10n.OnLanguageChanged += RefreshLocalizedTexts;
+            RefreshLocalizedTexts();
             HidePause();
             HideResult();
         }
@@ -92,6 +104,7 @@ namespace MendingtheSky
                 qiManager.OnQiWarning -= OnQiWarning;
             }
             GameSettings.OnChanged -= RefreshSettingsLabels;
+            L10n.OnLanguageChanged -= RefreshLocalizedTexts;
         }
 
         private void Update()
@@ -132,7 +145,8 @@ namespace MendingtheSky
             HideResult();
             if (levelNameText != null)
             {
-                levelNameText.text = $"LV {levelConfig.GetLevelId()}";
+                lastLevelId = levelConfig.GetLevelId();
+                levelNameText.text = L10n.Get("hud.level", lastLevelId);
             }
             if (statusText != null)
             {
@@ -178,7 +192,9 @@ namespace MendingtheSky
             }
             if (loseText != null)
             {
-                loseText.text = $"Holes {filledHoles} / {totalHoles}";
+                lastFilledHoles = filledHoles;
+                lastTotalHoles = totalHoles;
+                loseText.text = L10n.Get("ui.holes_progress", filledHoles, totalHoles);
             }
         }
 
@@ -192,7 +208,9 @@ namespace MendingtheSky
             }
             if (winText != null)
             {
-                winText.text = $"Holes {filledHoles} / {totalHoles}";
+                lastFilledHoles = filledHoles;
+                lastTotalHoles = totalHoles;
+                winText.text = L10n.Get("ui.holes_progress", filledHoles, totalHoles);
             }
         }
 
@@ -283,17 +301,49 @@ namespace MendingtheSky
                     RefreshSettingsLabels();
                 });
             }
+            if (languageButton != null)
+            {
+                // 循环 简体 → 繁體 → English，切换事件会触发 RefreshLocalizedTexts
+                languageButton.onClick.AddListener(() => L10n.CycleLanguage());
+            }
         }
 
         /// <summary>
         /// 刷新设置面板文本（预览高亮 ON/OFF）。
-        /// 说明：中文字体接入后改成 L10n key，见设计评审第七节。
         /// </summary>
         public void RefreshSettingsLabels()
         {
             if (previewToggleText != null)
             {
-                previewToggleText.text = GameSettings.ShowPlacementPreview ? "Preview: ON" : "Preview: OFF";
+                previewToggleText.text = L10n.Get(GameSettings.ShowPlacementPreview
+                    ? "ui.preview_on"
+                    : "ui.preview_off");
+            }
+        }
+
+        /// <summary>
+        /// 语言切换后统一刷新「由代码生成」的文本；场景里的静态文案由 LocalizedText 自行刷新。
+        /// </summary>
+        public void RefreshLocalizedTexts()
+        {
+            RefreshSettingsLabels();
+            if (levelNameText != null)
+            {
+                levelNameText.text = L10n.Get("hud.level", lastLevelId);
+            }
+            string progress = L10n.Get("ui.holes_progress", lastFilledHoles, lastTotalHoles);
+            if (loseText != null)
+            {
+                loseText.text = progress;
+            }
+            if (winText != null)
+            {
+                winText.text = progress;
+            }
+            if (languageButtonText != null)
+            {
+                languageButtonText.text = L10n.Get("ui.language",
+                    L10n.GetLanguageDisplayName(L10n.GetCurrentLanguage()));
             }
         }
     }

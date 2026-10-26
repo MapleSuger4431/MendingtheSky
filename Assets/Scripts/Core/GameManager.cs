@@ -28,9 +28,19 @@ namespace MendingtheSky
         [SerializeField] private DragController dragController;
         [SerializeField] private UIManager uiManager;
 
+        [Header("本地化")]
+        [Tooltip("简中 / 繁中 / 英文三张表；为空时界面会直接显示 key")]
+        [SerializeField] private LocalizationDatabase localizationDatabase;
+
         [Header("运行时状态（只读）")]
         [SerializeField] private GameState state = GameState.Idle;
         [SerializeField] private int filledHoleCount;
+
+        private void Awake()
+        {
+            // 必须早于所有 OnEnable：场景里的 LocalizedText 会在 OnEnable 里取文案
+            L10n.Init(localizationDatabase);
+        }
 
         private void Start()
         {
