@@ -48,7 +48,8 @@ namespace MendingtheSky
 
         private void Start()
         {
-            // 启动进入主界面（Idle），由玩家选择「开始游戏 / 无尽模式 / 关卡选择」
+            // 启动进入主界面，并从这里开始循环 BGM（主界面就开始播）
+            AudioManager.Instance?.PlayMusic();
             BackToIdle();
         }
 
@@ -274,6 +275,7 @@ namespace MendingtheSky
                 return;
             }
             SetState(GameState.Lose);
+            AudioManager.Instance?.PlaySfx(SfxId.Failure);
             if (dragController != null)
             {
                 dragController.ResetAll(); // 手上/暂存的灵石复位，避免悬空
@@ -302,6 +304,7 @@ namespace MendingtheSky
             if (filledHoleCount >= levelConfig.GetTotalHoles())
             {
                 SetState(GameState.Win);
+                AudioManager.Instance?.PlaySfx(SfxId.Success);
                 if (dragController != null)
                 {
                     dragController.ResetAll();

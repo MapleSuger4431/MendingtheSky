@@ -64,6 +64,7 @@ namespace MendingtheSky
             ls.SetPhysicsBodyType(RigidbodyType2D.Dynamic);
             ls.SetSimulated(true);
             SpawnAtPotTop(ls);
+            AudioManager.Instance?.PlaySfx(SfxId.Splash);
             return true;
         }
 
@@ -94,6 +95,7 @@ namespace MendingtheSky
         /// </summary>
         public void Tick(float dt)
         {
+            bool anyCooking = false;
             for (int i = potLingShi.Count - 1; i >= 0; i--)
             {
                 LingShi ls = potLingShi[i];
@@ -105,7 +107,25 @@ namespace MendingtheSky
                 if (ls.GetState() == LingShiState.Cooking)
                 {
                     ls.UpdateCooking(dt); // 计时达标后内部 SetState(Cooked) 并刷新发光贴图
+                    if (ls.GetState() == LingShiState.Cooked)
+                    {
+                        // 恰好煮好的这一刻提示一次
+                        AudioManager.Instance?.PlaySfx(SfxId.Notify);
+                    }
+                    else
+                    {
+                        anyCooking = true;
+                    }
                 }
+            }
+            // 有灵石在煮时循环咕嘟声，全部煮好/清空后停止
+            if (anyCooking)
+            {
+                AudioManager.Instance?.PlayCookLoop();
+            }
+            else
+            {
+                AudioManager.Instance?.StopCookLoop();
             }
         }
 

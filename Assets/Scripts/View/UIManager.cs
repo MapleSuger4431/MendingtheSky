@@ -317,6 +317,7 @@ namespace MendingtheSky
                     label.text = FormatLevelEntry(config);
                 }
                 button.onClick.RemoveAllListeners();
+                AddClickSound(button);
                 button.onClick.AddListener(() =>
                 {
                     HideLevelSelect();
@@ -538,6 +539,15 @@ namespace MendingtheSky
         /// <summary>所有按钮绑定：主界面、关卡选择、暂停、结算。</summary>
         private void BindButtons()
         {
+            // 统一先挂点击音，保证音效先于按钮动作播放
+            AddClickSound(menuStartButton, menuEndlessButton, menuLevelSelectButton, menuSettingsButton);
+            AddClickSound(levelSelectBackButton);
+            AddClickSound(resumeButton, restartButton, backToIdleButton);
+            AddClickSound(loseRetryButton, loseMenuButton);
+            AddClickSound(winRetryButton, winMenuButton);
+            AddClickSound(previewToggleButton, languageButton);
+            AddClickSound(settingsBackButton, settingsLanguageButton, settingsKeybindButton);
+
             // 主界面
             if (menuStartButton != null)
             {
@@ -657,6 +667,18 @@ namespace MendingtheSky
             {
                 // 循环 简体 → 繁體 → English，切换事件会触发 RefreshLocalizedTexts
                 languageButton.onClick.AddListener(() => L10n.CycleLanguage());
+            }
+        }
+
+        /// <summary>给按钮挂点击音（在按钮自身动作之前播放）。</summary>
+        private static void AddClickSound(params Button[] buttons)
+        {
+            foreach (Button button in buttons)
+            {
+                if (button != null)
+                {
+                    button.onClick.AddListener(() => AudioManager.Instance?.PlaySfx(SfxId.Click));
+                }
             }
         }
 

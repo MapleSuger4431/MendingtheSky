@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c36d377fddc30543a1ab9163cdbd290, type: 3}
+  m_Name: AudioLibrary
+  m_EditorClassIdentifier: 
+  bgmTheme: {fileID: 8300000, guid: 9c0be751157e2a24fb869e287be7020e, type: 3}
+  success: {fileID: 8300000, guid: 0014d4b828e0dd94cb5678146cbd6768, type: 3}
+  failure: {fileID: 8300000, guid: bdd9f86e3d4c40541b8910212aa32005, type: 3}
+  heal: {fileID: 8300000, guid: 7877a08558997d64fb19e2104c327b57, type: 3}
+  open: {fileID: 8300000, guid: 0326200c212a6e04aaf07e4f57daf75f, type: 3}
+  spawn: {fileID: 8300000, guid: afd5f5b8f48a04f428e909a880705b03, type: 3}
+  notify: {fileID: 8300000, guid: 377b0d04b0debe549968b226b0c4b84b, type: 3}
+  place: {fileID: 8300000, guid: 7a72c91cdfb0e7b46b644ee9ad3a85af, type: 3}
+  invalid: {fileID: 8300000, guid: 7f254d1b3eb47c544b8e4fb1851b3411, type: 3}
+  splash: {fileID: 8300000, guid: 3888a46fb15b7444687da2a5d02647f5, type: 3}
+  click: {fileID: 8300000, guid: 91ef75975c3fa524692b07a1bc5d9f90, type: 3}
+  lift: {fileID: 8300000, guid: 4e19549fd7c942f44973002c43205f1c, type: 3}
+  put: {fileID: 8300000, guid: 157471ce3a81f6b4db47a53a31a352ce, type: 3}
+  warningLoop: {fileID: 8300000, guid: 926d75702f4ef0a4a9ef3cd4a00cdfa5, type: 3}
+  bubblingLoop: {fileID: 8300000, guid: 8f5780b7dcebdc24b8103a03427cc014, type: 3}

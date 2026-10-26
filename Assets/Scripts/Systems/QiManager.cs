@@ -56,6 +56,7 @@ namespace MendingtheSky
             isEmpty = false;
             OnQiChanged?.Invoke(currentQi, maxQi);
             OnQiWarning?.Invoke(false);
+            AudioManager.Instance?.StopWarningLoop();
         }
 
         /// <summary>
@@ -118,6 +119,7 @@ namespace MendingtheSky
             isWarning = false;
             OnQiChanged?.Invoke(currentQi, maxQi);
             OnQiWarning?.Invoke(false);
+            AudioManager.Instance?.StopWarningLoop();
         }
 
         public float GetCurrentQi() { return currentQi; }
@@ -151,6 +153,15 @@ namespace MendingtheSky
             {
                 isWarning = shouldWarn;
                 OnQiWarning?.Invoke(isWarning);
+                // 告急音效：进入低灵气时循环播放，脱离后停止
+                if (isWarning)
+                {
+                    AudioManager.Instance?.PlayWarningLoop();
+                }
+                else
+                {
+                    AudioManager.Instance?.StopWarningLoop();
+                }
             }
         }
     }

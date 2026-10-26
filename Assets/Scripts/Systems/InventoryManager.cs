@@ -64,6 +64,11 @@ namespace MendingtheSky
                 hole.AddRequiredShapeEntry(piece);
                 CreateLingShi(levelConfig, piece, GetSpawnPosition(), hole.GetHoleId());
             }
+            // 一次发多块只播一次，避免叠音
+            if (pieces.Count > 0)
+            {
+                AudioManager.Instance?.PlaySfx(SfxId.Spawn);
+            }
         }
 
         /// <summary>工作台暂存灵石回落：保持 Cooked 状态，插值缩放回背篓。</summary>

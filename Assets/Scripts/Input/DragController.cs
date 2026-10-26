@@ -99,6 +99,7 @@ namespace MendingtheSky
             {
                 return;
             }
+            AudioManager.Instance?.PlaySfx(SfxId.Lift);
             // 拾取新灵石时，其余暂存块返回背篓（被拾取的那块排除，防止自我回收）
             ReturnStashedToBasket(picked);
 
@@ -173,11 +174,17 @@ namespace MendingtheSky
                     // 2026-10-24 用户反馈：完全按「形状 + 同洞」判定放置（取消来源洞绑定），
                     // 自由放置优先，拼错可点选取下重摆。
                     gridManager.FillCells(ls, anchor.x, anchor.y);
+                    AudioManager.Instance?.PlaySfx(SfxId.Place);
                     ls.SetTransparent(false);
                     ls.SetTargetScale(1f);
                     StartCoroutine(SnapToCell(ls, anchor));
                     EndDrag();
                     return;
+                }
+                if (gridManager.IsInside(anchor.x, anchor.y))
+                {
+                    // 落在网格范围内但放不下（形状不符 / 缺口不匹配）
+                    AudioManager.Instance?.PlaySfx(SfxId.Invalid);
                 }
             }
 

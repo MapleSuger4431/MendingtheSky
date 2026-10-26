@@ -104,6 +104,7 @@ namespace MendingtheSky
             if (newHole != null)
             {
                 generatedHoleCount++;
+                AudioManager.Instance?.PlaySfx(SfxId.Open);
                 // 2026-10-25 修复：补洞后必须重建网格视觉。
                 // 之前漏了这一行，新洞的格子不会被画出来，要等到下一个洞愈合触发 RefreshAll 才「一次性冒出来」，
                 // 表现为「背篓多了石头但工作台看不到洞」。
@@ -180,6 +181,7 @@ namespace MendingtheSky
             if (newHole != null)
             {
                 generatedHoleCount++;
+                AudioManager.Instance?.PlaySfx(SfxId.Open);
                 if (inventoryManager != null)
                 {
                     inventoryManager.AddLingShiForCells(newHole, newCells, levelConfig);
@@ -732,6 +734,7 @@ namespace MendingtheSky
             {
                 gridVisual.RefreshAll(); // 清掉闭合格子的渲染实例
             }
+            AudioManager.Instance?.PlaySfx(SfxId.Heal);
             if (gameManager != null)
             {
                 gameManager.OnHoleClosed(hole, qiReward);
