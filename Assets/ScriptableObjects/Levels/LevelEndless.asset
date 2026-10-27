@@ -38,6 +38,15 @@ MonoBehaviour:
   redundantThreshold: 4
   potMaxCount: 3
   initialRotationChance: 0.4
+  endlessDifficulty:
+    costIncreasePerHole: 0.02
+    maxCostMultiplier: 3
+    cellsTierHoles: 5
+    cellsPerTier: 1
+    maxCellBonus: 15
+    intervalTierHoles: 5
+    intervalReducePerTier: 0
+    minIntervalMultiplier: 0.6
   lingShiTypePool:
   - typeConfig: {fileID: 11400000, guid: db5d1f67c4530cd4a8dcef3428e0beab, type: 2}
     weight: 1

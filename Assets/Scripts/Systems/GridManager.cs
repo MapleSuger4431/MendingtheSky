@@ -41,6 +41,10 @@ namespace MendingtheSky
         private int generatedHoleCount;
         private int nextHoleId = 1;
         private System.Random random;
+        [Tooltip("无尽模式难度：新洞格数的额外增量（0 = 关卡原始尺寸）")]
+        [SerializeField] private int holeCellBonus;
+        [Tooltip("无尽模式难度：补洞间隔倍率（1 = 关卡原始间隔）")]
+        [SerializeField] private float holeIntervalMultiplier = 1f;
 
         [Header("阶段 5 接线（可为空；为空时逻辑照常运行，便于 EditMode 测试）")]
         [SerializeField] private GridVisual gridVisual;
@@ -50,6 +54,9 @@ namespace MendingtheSky
         public void GenerateLevel(LevelConfig levelConfig)
         {
             this.levelConfig = levelConfig;
+            // 难度参数每次开新局都回到关卡原始值，由 GameManager 在无尽模式里逐步上调
+            holeCellBonus = 0;
+            holeIntervalMultiplier = 1f;
             random = levelConfig.GetSeed() != 0
                 ? new System.Random(levelConfig.GetSeed())
                 : new System.Random();
@@ -91,7 +98,7 @@ namespace MendingtheSky
                 return;
             }
             spawnTimer += dt;
-            if (spawnTimer < levelConfig.GetHoleSpawnInterval())
+            if (spawnTimer < levelConfig.GetHoleSpawnInterval() * holeIntervalMultiplier)
             {
                 return;
             }
@@ -171,6 +178,18 @@ namespace MendingtheSky
         /// 调试入口：等价于 Tick 内的一次成功生成（计数 + 生成 + 只给新增格子发石）。
         /// 对应文档阶段 1 验证点「手动调 TrySpawnNewHole 能加新洞」。
         /// </summary>
+        /// <summary>无尽模式难度：新洞的额外格数（0 = 关卡原始尺寸）。</summary>
+        public void SetHoleCellBonus(int bonus)
+        {
+            holeCellBonus = Mathf.Max(0, bonus);
+        }
+
+        /// <summary>无尽模式难度：补洞间隔倍率（1 = 原始间隔，小于 1 表示补得更快）。</summary>
+        public void SetHoleIntervalMultiplier(float multiplier)
+        {
+            holeIntervalMultiplier = Mathf.Clamp(multiplier, 0.1f, 1f);
+        }
+
         public Hole SpawnHoleForDebug()
         {
             if (levelConfig == null)
@@ -219,8 +238,8 @@ namespace MendingtheSky
         /// </summary>
         private List<Vector2Int> SpreadHole(int seedR, int seedC, bool allowTouchUnfilled)
         {
-            int minSize = levelConfig.GetMinHoleSize();
-            int maxSize = levelConfig.GetMaxHoleSize();
+            int minSize = levelConfig.GetMinHoleSize() + holeCellBonus;
+            int maxSize = Mathf.Min(levelConfig.GetMaxHoleSize() + holeCellBonus, levelConfig.GetMaxMergedHoleSize());
             int minRowsSpan = levelConfig.GetMinHoleRows();
             int minColsSpan = levelConfig.GetMinHoleCols();
             var cells = new List<Vector2Int> { new Vector2Int(seedR, seedC) };

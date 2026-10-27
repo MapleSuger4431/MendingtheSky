@@ -61,6 +61,9 @@ namespace MendingtheSky
         [Tooltip("初始灵石带随机朝向的概率（仅对旋转后形态不同的形状生效；0=全部正向，1=全部随机）")]
         public float initialRotationChance = 0.4f;
 
+        [Header("无尽模式难度曲线（仅 isEndless 生效；留空则难度恒定）")]
+        public EndlessDifficulty endlessDifficulty;
+
         [Header("灵石种类池（权重随机，阶段2接入）")]
         public LingShiTypeEntry[] lingShiTypePool;
 
@@ -90,6 +93,7 @@ namespace MendingtheSky
         public int GetRedundantThreshold() { return redundantThreshold; }
         public int GetPotMaxCount() { return potMaxCount; }
         public float GetInitialRotationChance() { return initialRotationChance; }
+        public EndlessDifficulty GetEndlessDifficulty() { return endlessDifficulty; }
         public LingShiTypeEntry[] GetLingShiTypePool() { return lingShiTypePool; }
     }
 }

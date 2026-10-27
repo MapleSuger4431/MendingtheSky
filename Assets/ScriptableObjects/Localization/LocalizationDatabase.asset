@@ -84,6 +84,8 @@ MonoBehaviour:
       value: "\u9759\u97F3"
     - key: settings.unmute
       value: "\u6062\u590D"
+    - key: hud.endless_diff
+      value: "\u96BE\u5EA6 \xD7{0}"
   - language: 41
     entries:
     - key: ui.paused
@@ -154,6 +156,8 @@ MonoBehaviour:
       value: "\u975C\u97F3"
     - key: settings.unmute
       value: "\u6062\u5FA9"
+    - key: hud.endless_diff
+      value: "\u96E3\u5EA6 \xD7{0}"
   - language: 10
     entries:
     - key: ui.paused
@@ -224,3 +228,5 @@ MonoBehaviour:
       value: Mute
     - key: settings.unmute
       value: Unmute
+    - key: hud.endless_diff
+      value: "Difficulty \xD7{0}"

@@ -25,6 +25,8 @@ namespace MendingtheSky
         [SerializeField] private float currentQi;
         [SerializeField] private float maxQi = 100f;
         [SerializeField] private float qiPerCellPerSecond = 0.1f;
+        [Tooltip("无尽模式难度：灵气消耗倍率，1 = 关卡原始速率")]
+        [SerializeField] private float difficultyMultiplier = 1f;
         [SerializeField] private bool isWarning;
         [SerializeField] private bool isEmpty;
 
@@ -52,6 +54,7 @@ namespace MendingtheSky
             maxQi = Mathf.Max(1f, levelConfig.GetInitialQi());
             currentQi = maxQi;
             qiPerCellPerSecond = levelConfig.GetQiPerCellPerSecond();
+            difficultyMultiplier = 1f;
             isWarning = false;
             isEmpty = false;
             OnQiChanged?.Invoke(currentQi, maxQi);
@@ -75,8 +78,20 @@ namespace MendingtheSky
             {
                 return;
             }
-            SpendQi(unfilledCells * qiPerCellPerSecond * dt);
+            // 无尽模式下 difficultyMultiplier 会随已补洞数增长（见 EndlessDifficulty）
+            SpendQi(unfilledCells * qiPerCellPerSecond * difficultyMultiplier * dt);
         }
+
+        /// <summary>
+        /// 设置无尽模式的灵气消耗倍率（1 = 原始速率）。普通关不需要调用。
+        /// </summary>
+        public void SetDifficultyMultiplier(float multiplier)
+        {
+            difficultyMultiplier = Mathf.Max(0f, multiplier);
+        }
+
+        /// <summary>当前灵气消耗倍率（HUD 显示难度用）。</summary>
+        public float GetDifficultyMultiplier() { return difficultyMultiplier; }
 
         /// <summary>
         /// 增加灵气（洞口闭合返还）。上限 clamp，不溢出；失败后不再变化。

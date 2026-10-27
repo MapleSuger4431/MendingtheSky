@@ -133,6 +133,8 @@ namespace MendingtheSky
         // 语言切换后需要重算的带参数文本的缓存值
         private int lastLevelId = 1;
         private bool lastIsEndless;
+        [Tooltip("无尽模式当前难度倍率（HUD 显示用）")]
+        private float lastDifficultyMultiplier = 1f;
         private int lastFilledHoles;
         private int lastTotalHoles = 1;
         private int lastEndlessBest;
@@ -209,6 +211,7 @@ namespace MendingtheSky
             lastLevelId = levelConfig.GetLevelId();
             lastIsEndless = levelConfig.IsEndless();
             lastFilledHoles = 0;
+            lastDifficultyMultiplier = 1f;
             if (levelNameText != null)
             {
                 levelNameText.text = FormatLevelName();
@@ -493,10 +496,11 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>无尽模式：每补好一个洞刷新 HUD 上的「已补 N 洞」。</summary>
-        public void UpdateEndlessProgress(int filledHoles)
+        /// <summary>无尽模式：每补好一个洞刷新 HUD 上的「已补 N 洞 · 难度 ×X」。</summary>
+        public void UpdateEndlessProgress(int filledHoles, float difficultyMultiplier = 1f)
         {
             lastFilledHoles = filledHoles;
+            lastDifficultyMultiplier = difficultyMultiplier;
             if (lastIsEndless && levelNameText != null)
             {
                 levelNameText.text = FormatLevelName();
@@ -812,12 +816,20 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>HUD 关卡名：普通关卡「第 N 关」，无尽模式「无尽模式 · 已补 N 洞」。</summary>
+        /// <summary>HUD 关卡名：普通关卡「第 N 关」，无尽模式「无尽模式 · 已补 N 洞 · 难度 ×X」。</summary>
         private string FormatLevelName()
         {
-            return lastIsEndless
-                ? L10n.Get("hud.endless_progress", lastFilledHoles)
-                : L10n.Get("hud.level", lastLevelId);
+            if (!lastIsEndless)
+            {
+                return L10n.Get("hud.level", lastLevelId);
+            }
+            string progress = L10n.Get("hud.endless_progress", lastFilledHoles);
+            // 难度倍率只在真的变难后才显示，第一洞之前不占地方
+            if (lastDifficultyMultiplier > 1.001f)
+            {
+                return progress + " · " + L10n.Get("hud.endless_diff", lastDifficultyMultiplier.ToString("0.0"));
+            }
+            return progress;
         }
     }
 }

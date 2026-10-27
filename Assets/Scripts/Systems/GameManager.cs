@@ -259,12 +259,33 @@ namespace MendingtheSky
             }
             qiManager.AddQi(qiReward);
             filledHoleCount++;
-            if (levelConfig != null && levelConfig.IsEndless() && uiManager != null)
+            if (levelConfig != null && levelConfig.IsEndless())
             {
-                // 无尽模式：HUD 上实时显示「已补 N 洞」
-                uiManager.UpdateEndlessProgress(filledHoleCount);
+                // 无尽模式：每补好一个洞，按难度曲线上调消耗 / 洞尺寸 / 补洞间隔
+                ApplyEndlessDifficulty();
+                if (uiManager != null)
+                {
+                    // HUD 上实时显示「已补 N 洞 · 难度 ×X」
+                    uiManager.UpdateEndlessProgress(filledHoleCount, qiManager.GetDifficultyMultiplier());
+                }
             }
             CheckWinCondition();
+        }
+
+        /// <summary>
+        /// 按已补洞数把难度曲线应用到各系统（只对无尽模式生效；曲线为空则什么都不做）。
+        /// </summary>
+        private void ApplyEndlessDifficulty()
+        {
+            EndlessDifficulty difficulty = levelConfig != null ? levelConfig.GetEndlessDifficulty() : null;
+            if (difficulty == null)
+            {
+                return;
+            }
+            float costMultiplier = difficulty.GetCostMultiplier(filledHoleCount);
+            qiManager.SetDifficultyMultiplier(costMultiplier);
+            gridManager.SetHoleCellBonus(difficulty.GetCellBonus(filledHoleCount));
+            gridManager.SetHoleIntervalMultiplier(difficulty.GetIntervalMultiplier(filledHoleCount));
         }
 
         /// <summary>灵气归零（失败）：只从 Playing 进入 Lose，避免重复结算。</summary>
