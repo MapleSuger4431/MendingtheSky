@@ -20,17 +20,23 @@ namespace MendingtheSky
     {
         [Header("HUD（游戏中常驻）")]
         [SerializeField] private GameObject hudPanel;
-        [Tooltip("灵气条填充图（Image.fillAmount 驱动）")]
+        [Tooltip("灵气条遮罩区域（RectMask2D）。九宫格填充图不能用 fillAmount，改为裁剪子图宽度")]
+        [SerializeField] private RectTransform qiBarFillArea;
+        [Tooltip("灵气条填充图：宽度由 qiBarFillArea 的 RectMask2D 裁剪")]
         [SerializeField] private Image qiBarFill;
         [Tooltip("灵气数值文本，如 87 / 100")]
         [SerializeField] private TextMeshProUGUI qiText;
         [SerializeField] private TextMeshProUGUI levelNameText;
         [Tooltip("临时提示文本（如锅已满）")]
         [SerializeField] private TextMeshProUGUI statusText;
+        [Tooltip("HUD 右上角的暂停按钮（移动端没有 ESC 键）")]
+        [SerializeField] private Button hudPauseButton;
 
         [Header("灵气条颜色")]
-        [SerializeField] private Color normalQiColor = new Color(0.35f, 0.85f, 0.75f, 1f);
-        [SerializeField] private Color warningQiColor = new Color(1f, 0.32f, 0.32f, 1f);
+        [Tooltip("正常状态：白色 = 不改动美术原色")]
+        [SerializeField] private Color normalQiColor = Color.white;
+        [Tooltip("低灵气警告：整体染红（与美术底色相乘）")]
+        [SerializeField] private Color warningQiColor = new Color(1f, 0.42f, 0.42f, 1f);
         [Tooltip("低灵气闪烁速度")]
         [SerializeField] private float warningBlinkSpeed = 2f;
 
@@ -57,6 +63,8 @@ namespace MendingtheSky
         [SerializeField] private Button previewToggleButton;
         [Tooltip("显示当前预览开关状态的文本")]
         [SerializeField] private TextMeshProUGUI previewToggleText;
+        [Tooltip("预览开关的图形（ui_toggle）：水平翻转表示开/关（美术把滑块画在左端）")]
+        [SerializeField] private RectTransform previewToggleVisual;
 
         [Header("语言切换（暂停面板）")]
         [Tooltip("循环切换 简体 → 繁體 → English 的按钮")]
@@ -499,13 +507,26 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 刷新灵气条与数值。fillAmount 需要灵气条贴图是「满格」状态（设计文档 5.20）。
+        /// 刷新灵气条与数值。
+        /// 填充图是九宫格美术（左右两端有云纹），fillAmount 会把中间拉伸并压扁端头，
+        /// 因此改成「RectMask2D 裁剪 + 填充图按比例改宽度」：端头形状始终不变，超出的部分被裁掉。
         /// </summary>
         public void UpdateQi(float current, float max)
         {
             if (qiBarFill != null)
             {
-                qiBarFill.fillAmount = max > 0f ? Mathf.Clamp01(current / max) : 0f;
+                float ratio = max > 0f ? Mathf.Clamp01(current / max) : 0f;
+                if (qiBarFillArea != null)
+                {
+                    // 填充图锚定在左侧（anchorMin.x == anchorMax.x == 0），sizeDelta.x 就是实际宽度
+                    float areaWidth = qiBarFillArea.rect.width;
+                    qiBarFill.rectTransform.sizeDelta = new Vector2(areaWidth * ratio, 0f);
+                }
+                else
+                {
+                    // 没有遮罩容器时退回旧的 fillAmount 方案
+                    qiBarFill.fillAmount = ratio;
+                }
                 if (!isWarning)
                 {
                     qiBarFill.color = normalQiColor;
@@ -542,6 +563,7 @@ namespace MendingtheSky
             // 统一先挂点击音，保证音效先于按钮动作播放
             AddClickSound(menuStartButton, menuEndlessButton, menuLevelSelectButton, menuSettingsButton);
             AddClickSound(levelSelectBackButton);
+            AddClickSound(hudPauseButton);
             AddClickSound(resumeButton, restartButton, backToIdleButton);
             AddClickSound(loseRetryButton, loseMenuButton);
             AddClickSound(winRetryButton, winMenuButton);
@@ -614,6 +636,12 @@ namespace MendingtheSky
                     HideLevelSelect();
                     ShowMenu();
                 });
+            }
+
+            // HUD 暂停按钮（移动端没有 ESC 键，常驻右上角）
+            if (hudPauseButton != null)
+            {
+                hudPauseButton.onClick.AddListener(() => gameManager?.PauseGame());
             }
 
             // 暂停面板
@@ -692,6 +720,13 @@ namespace MendingtheSky
                 previewToggleText.text = L10n.Get(GameSettings.ShowPlacementPreview
                     ? "ui.preview_on"
                     : "ui.preview_off");
+            }
+            if (previewToggleVisual != null)
+            {
+                // 美术把滑块画在胶囊左端（= 关）；开启时水平翻转让滑块跑到右端，读起来就是「开」
+                Vector3 scale = previewToggleVisual.localScale;
+                scale.x = GameSettings.ShowPlacementPreview ? -Mathf.Abs(scale.x) : Mathf.Abs(scale.x);
+                previewToggleVisual.localScale = scale;
             }
         }
 

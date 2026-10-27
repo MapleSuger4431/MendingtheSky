@@ -50,3 +50,7 @@ crashlytics-build.properties
 # 音频临时素材（中间处理产物，仅本地保留）
 /Assets/Audio/_raw/
 /Assets/Audio/_raw.meta
+# AI 生成历史（中间产物；正式素材会复制到 Assets/Art/ 下再提交）
+/Assets/TJGenerators/
+# Codely 本地缓存（剪贴板截图等）
+/.codely/

@@ -22,6 +22,16 @@
       },
       "url": "https://packages.tuanjie.cn"
     },
+    "cn.tuanjie.create.ui": {
+      "version": "file:../.codely-cli/extensions/TJUIBuilder/Packages/cn.tuanjie.create.ui",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.textmeshpro": "3.0.9",
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
+      }
+    },
     "com.unity.2d.animation": {
       "version": "9.2.0",
       "depth": 1,
@@ -40,8 +50,8 @@
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.unity.2d.common": "6.0.6",
         "com.unity.2d.sprite": "1.0.0",
+        "com.unity.2d.common": "6.0.6",
         "com.unity.mathematics": "1.2.6",
         "com.unity.modules.animation": "1.0.0"
       },
@@ -74,9 +84,9 @@
       "depth": 1,
       "source": "registry",
       "dependencies": {
+        "com.unity.2d.animation": "9.2.0",
         "com.unity.2d.common": "8.1.0",
-        "com.unity.2d.sprite": "1.0.0",
-        "com.unity.2d.animation": "9.2.0"
+        "com.unity.2d.sprite": "1.0.0"
       },
       "url": "https://packages.tuanjie.cn"
     },
@@ -91,8 +101,8 @@
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.unity.2d.common": "8.1.0",
         "com.unity.mathematics": "1.1.0",
+        "com.unity.2d.common": "8.1.0",
         "com.unity.modules.physics2d": "1.0.0"
       },
       "url": "https://packages.tuanjie.cn"
@@ -111,9 +121,9 @@
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.unity.ugui": "1.0.0",
-        "com.unity.2d.tilemap": "1.0.0",
         "com.unity.modules.tilemap": "1.0.0",
+        "com.unity.2d.tilemap": "1.0.0",
+        "com.unity.ugui": "1.0.0",
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.tuanjie.cn"
@@ -195,6 +205,13 @@
     "com.unity.mathematics": {
       "version": "1.2.6",
       "depth": 2,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.tuanjie.cn"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "3.2.1",
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.tuanjie.cn"
