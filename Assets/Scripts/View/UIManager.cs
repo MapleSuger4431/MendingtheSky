@@ -20,10 +20,12 @@ namespace MendingtheSky
     {
         [Header("HUD（游戏中常驻）")]
         [SerializeField] private GameObject hudPanel;
-        [Tooltip("灵气条遮罩区域（RectMask2D）。九宫格填充图不能用 fillAmount，改为裁剪子图宽度")]
+        [Tooltip("灵气条遮罩区域（RectMask2D）：宽度按灵气比例伸缩，露出的部分就是填充")]
         [SerializeField] private RectTransform qiBarFillArea;
-        [Tooltip("灵气条填充图：宽度由 qiBarFillArea 的 RectMask2D 裁剪")]
+        [Tooltip("灵气条填充图：固定满宽，始终不缩放，只被 qiBarFillArea 裁切")]
         [SerializeField] private Image qiBarFill;
+        [Tooltip("满灵气时的遮罩宽度（像素）；<=0 表示首次刷新时按遮罩当前宽度自动记录")]
+        [SerializeField] private float qiBarFillFullWidth;
         [Tooltip("灵气数值文本，如 87 / 100")]
         [SerializeField] private TextMeshProUGUI qiText;
         [SerializeField] private TextMeshProUGUI levelNameText;
@@ -508,8 +510,10 @@ namespace MendingtheSky
 
         /// <summary>
         /// 刷新灵气条与数值。
-        /// 填充图是九宫格美术（左右两端有云纹），fillAmount 会把中间拉伸并压扁端头，
-        /// 因此改成「RectMask2D 裁剪 + 填充图按比例改宽度」：端头形状始终不变，超出的部分被裁掉。
+        /// 填充图是带柔边的整条美术，任何缩放都会变形；九宫格在这个尺寸下又会因为
+        /// 边框大于矩形而把中间拉伸带压成 0（表现为整条看不见）。
+        /// 因此改成「填充图固定满宽不缩放 + RectMask2D 按比例裁切」：
+        /// 填多少就露出多少，左端造型始终不变，右端由遮罩直接切齐。
         /// </summary>
         public void UpdateQi(float current, float max)
         {
@@ -518,9 +522,13 @@ namespace MendingtheSky
                 float ratio = max > 0f ? Mathf.Clamp01(current / max) : 0f;
                 if (qiBarFillArea != null)
                 {
-                    // 填充图锚定在左侧（anchorMin.x == anchorMax.x == 0），sizeDelta.x 就是实际宽度
-                    float areaWidth = qiBarFillArea.rect.width;
-                    qiBarFill.rectTransform.sizeDelta = new Vector2(areaWidth * ratio, 0f);
+                    // 遮罩锚定在左侧（anchorMin.x == anchorMax.x == 0），改 sizeDelta.x 就是改「露出宽度」
+                    if (qiBarFillFullWidth <= 0f)
+                    {
+                        // 首次刷新时按场景里的满宽记录一次，之后固定使用，避免越缩越小
+                        qiBarFillFullWidth = Mathf.Max(1f, qiBarFillArea.sizeDelta.x);
+                    }
+                    qiBarFillArea.sizeDelta = new Vector2(qiBarFillFullWidth * ratio, qiBarFillArea.sizeDelta.y);
                 }
                 else
                 {
