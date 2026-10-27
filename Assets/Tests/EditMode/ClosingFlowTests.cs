@@ -109,22 +109,19 @@ namespace MendingtheSky.Tests
         }
 
         [Test]
-        public void FullButShapeMismatch_DoesNotHeal()
+        public void Full_HealsRegardlessOfShapes()
         {
-            // 洞满但形状组合不符合需求清单 → 不愈合（保留现场供玩家重摆）
+            // 2026-10-27 方案 D：不再校验形状清单，洞填满就愈合（形状随便拼）
             Hole hole = grid.GetAllHoles()[0];
             var cells = hole.GetCells();
-            // 需求清单登记为「一块 domino」，但玩家用本洞切出的单格填满
-            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
+            int holeId = hole.GetHoleId();
 
             foreach (Vector2Int cell in cells)
             {
-                grid.FillCells(CreateMonomino(hole.GetHoleId()), cell.x, cell.y);
+                grid.FillCells(CreateMonomino(999), cell.x, cell.y);
             }
 
-            Assert.IsTrue(hole.IsFull());
-            Assert.IsFalse(hole.IsClosing(), "形状不符时不应进入闭合");
-            Assert.IsNotNull(grid.GetHoleById(hole.GetHoleId()), "形状不符时洞应保留");
+            Assert.IsNull(grid.GetHoleById(holeId), "填满即愈合，不应再校验形状组合");
         }
 
         [Test]
@@ -134,7 +131,6 @@ namespace MendingtheSky.Tests
             Hole hole = grid.GetAllHoles()[0];
             var cells = hole.GetCells();
             int holeId = hole.GetHoleId();
-            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
 
             foreach (Vector2Int cell in cells)
             {
@@ -147,21 +143,17 @@ namespace MendingtheSky.Tests
         [Test]
         public void FullWithMatchingShapes_Heals()
         {
-            // 需求清单与放置形状一致 → 正常愈合（用本洞切出的灵石，走完整形状校验）
+            // 用本洞切出的灵石填满 → 愈合移除（方案 D 下这也只是"填满即愈合"的一个特例）
             Hole hole = grid.GetAllHoles()[0];
             var cells = hole.GetCells();
             int holeId = hole.GetHoleId();
-            foreach (Vector2Int _ in cells)
-            {
-                hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero });
-            }
 
             foreach (Vector2Int cell in cells)
             {
                 grid.FillCells(CreateMonomino(holeId), cell.x, cell.y);
             }
 
-            Assert.IsNull(grid.GetHoleById(hole.GetHoleId()), "形状一致时应愈合移除");
+            Assert.IsNull(grid.GetHoleById(hole.GetHoleId()), "填满时应愈合移除");
         }
     }
 }

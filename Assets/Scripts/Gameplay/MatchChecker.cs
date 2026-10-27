@@ -18,34 +18,16 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 拖拽预览三态（2026-10-25 用户定稿）：
-        /// 几何不可放 → Invalid（红）；
-        /// 几何可放且本洞清单里还有这个形状的剩余额度 → Valid（绿）；
-        /// 几何可放但清单额度已用完 / 清单里没有这个形状 → ShapeNotInHole（黄，仍允许放下）。
-        /// 冗余补给灵石（sourceHoleId == -1）不占清单额度，一律绿。
-        /// 额度 = 清单条目数 − 洞内已放的非冗余同形状块数，实时计算：放进去就少一个，抠出来就恢复一个。
-        /// 未登记清单的洞（测试/调试）一律 Valid。
+        /// 拖拽预览两态（2026-10-27 方案 D 定稿）：
+        /// 几何可放 → Valid（绿）；否则 → Invalid（红）。
+        /// 形状清单已移除，因此不再有「清单里没有这个形状」的黄色提示。
         /// </summary>
         public static PreviewHint GetPreviewHint(LingShi ls, int targetRow, int targetCol,
             GridManager gridManager)
         {
-            Hole hole = GetMatchedHole(ls, targetRow, targetCol, gridManager);
-            if (hole == null)
-            {
-                return PreviewHint.Invalid;
-            }
-            if (!hole.HasShapeEntries())
-            {
-                return PreviewHint.Valid;
-            }
-            // 冗余补给灵石没有来源洞，可以顶任意位置 → 永远绿色
-            if (ls.GetSourceHoleId() < 0)
-            {
-                return PreviewHint.Valid;
-            }
-            return hole.GetRemainingShapeQuota(ls.GetShapeSignature()) > 0
+            return GetMatchedHole(ls, targetRow, targetCol, gridManager) != null
                 ? PreviewHint.Valid
-                : PreviewHint.ShapeNotInHole;
+                : PreviewHint.Invalid;
         }
 
         /// <summary>目标锚点覆盖的所有绝对格（无论是否可放都返回，用于预览高亮）。</summary>

@@ -49,7 +49,9 @@ namespace MendingtheSky
             {
                 label = GetComponent<TextMeshProUGUI>();
             }
-            if (label != null && !string.IsNullOrEmpty(key))
+            // L10n 还没 Init（场景加载早于 GameManager.Start）时先不动文本，
+            // 等 Init 触发的 OnLanguageChanged 再统一刷新，避免刷出 key 与误报警告
+            if (label != null && !string.IsNullOrEmpty(key) && L10n.IsInitialized)
             {
                 label.text = L10n.Get(key);
             }

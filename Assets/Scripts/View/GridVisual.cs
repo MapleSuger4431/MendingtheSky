@@ -53,8 +53,6 @@ namespace MendingtheSky
         [SerializeField] private Transform previewRoot;
         [SerializeField] private Color previewValidColor = new Color(0.4f, 1f, 0.55f, 0.55f);
         [SerializeField] private Color previewInvalidColor = new Color(1f, 0.35f, 0.35f, 0.55f);
-        [Tooltip("黄色：几何能放，但本洞形状清单里没有这个形状（放下去填满也不会愈合）")]
-        [SerializeField] private Color previewShapeNotInHoleColor = new Color(1f, 0.82f, 0.3f, 0.55f);
         [SerializeField] private int previewSortingOrder = 4;
 
         [Header("洞口闭合淡出动画（阶段 5）")]
@@ -156,19 +154,7 @@ namespace MendingtheSky
             {
                 return;
             }
-            Color color;
-            switch (hint)
-            {
-                case PreviewHint.Valid:
-                    color = previewValidColor;
-                    break;
-                case PreviewHint.ShapeNotInHole:
-                    color = previewShapeNotInHoleColor;
-                    break;
-                default:
-                    color = previewInvalidColor;
-                    break;
-            }
+            Color color = hint == PreviewHint.Valid ? previewValidColor : previewInvalidColor;
             foreach (Vector2Int cell in cells)
             {
                 if (!gridManager.IsInside(cell.x, cell.y))

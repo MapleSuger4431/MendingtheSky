@@ -151,7 +151,8 @@ namespace MendingtheSky
             potManager.SetMaxCount(config.GetPotMaxCount());
             potManager.Clear();
 
-            // 4) 背篓初始灵石（按洞切割 + 冗余补给）
+            // 4) 背篓初始灵石（按洞切割；方案 D 下不再有冗余补给）
+            inventoryManager.InvalidatePendingSpawns();
             inventoryManager.GenerateInitialInventory(config, gridManager);
 
             // 5) 输入状态复位（手里/暂存/预览全部清空）
@@ -241,6 +242,11 @@ namespace MendingtheSky
             {
                 dragController.ResetAll();
             }
+            // 回主界面：作废所有待弹出的石头，避免在菜单界面里冒出石头
+            if (inventoryManager != null)
+            {
+                inventoryManager.InvalidatePendingSpawns();
+            }
             uiManager.HideAllPanels();
             uiManager.HideHUD();
             uiManager.ShowMenu();
@@ -259,6 +265,9 @@ namespace MendingtheSky
             }
             qiManager.AddQi(qiReward);
             filledHoleCount++;
+            // 方案 D：洞消失后需要重新算缺口，补上玩家可能失去的那部分石头
+            inventoryManager.InvalidatePendingSpawns();
+            inventoryManager.EnsureSupply(levelConfig);
             if (levelConfig != null && levelConfig.IsEndless())
             {
                 // 无尽模式：每补好一个洞，按难度曲线上调消耗 / 洞尺寸 / 补洞间隔

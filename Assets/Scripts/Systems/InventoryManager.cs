@@ -20,10 +20,35 @@ namespace MendingtheSky
         [Tooltip("初始灵石随机朝向：避免拿起来无需旋转即可拼，保留旋转玩法")]
         [SerializeField] private bool randomizeInitialRotation = true;
 
+        [Header("补给节奏（2026-10-27 方案 D）")]
+        [Tooltip("开洞时逐块弹出的间隔（秒）")]
+        [SerializeField] private float holeSpawnStagger = 0.12f;
+        [Tooltip("兜底补给逐块弹出的间隔（秒）")]
+        [SerializeField] private float supplyStagger = 0.35f;
+        [Tooltip("补给时额外预留的格数余量，避免玩家放一块就触发一次补给")]
+        [SerializeField] private int supplyMargin = 3;
+        [Tooltip("废石观测：每隔多少秒最多打一条废石统计日志")]
+        [SerializeField] private float wasteLogInterval = 3f;
+
         private readonly List<LingShi> lingShiList = new List<LingShi>();
         private GridManager gridManager;
         private readonly System.Random random = new System.Random();
         private int nextSortingIndex = 0;
+
+        /// <summary>
+        /// 待生成队列的世代号：洞愈合 / 合并 / 重开关卡时递增，
+        /// 队列里世代对不上的项直接丢弃（防止弹出过程中洞已消失）。
+        /// </summary>
+        private int spawnGeneration;
+        private readonly Queue<PendingPiece> pendingPieces = new Queue<PendingPiece>();
+        private Coroutine spawnRoutine;
+        private float lastWasteLogTime;
+
+        private struct PendingPiece
+        {
+            public List<Vector2Int> cells;
+            public int generation;
+        }
 
         public void GenerateInitialInventory(LevelConfig levelConfig, GridManager gridManager)
         {
@@ -33,7 +58,6 @@ namespace MendingtheSky
             {
                 AddLingShiFromHole(hole, levelConfig);
             }
-            TryAddRedundant(levelConfig);
         }
 
         /// <summary>为新洞切出灵石并投放到背篓（开局生成 / 新建整洞时调用）。</summary>
@@ -47,9 +71,9 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 只给洞口的这一部分格子切石并登记（合并补洞时调用）。
-        /// 合并后洞已经有清单，若再按整洞切一次会造成「清单格数 &gt; 洞格数」并多发一整套灵石；
-        /// 这里只处理真正新增的格子，清单与背篓数量才对得上。
+        /// 为洞口的这一批格子备石（开洞 / 合并补洞时调用），2026-10-27 方案 D：
+        /// 1) 先用背篓里现有的石头顶替能塞进这批格子的部分（把废石消化掉，少发新石）；
+        /// 2) 剩下没被覆盖的格子才切开，逐块弹出（未熬煮，进背篓）。
         /// </summary>
         public void AddLingShiForCells(Hole hole, List<Vector2Int> cells, LevelConfig levelConfig)
         {
@@ -57,18 +81,326 @@ namespace MendingtheSky
             {
                 return;
             }
-            List<List<Vector2Int>> pieces = ShapeCutter.Cut(cells, shapePoolConfig, maxPiecesPerHole, random);
-            foreach (List<Vector2Int> piece in pieces)
-            {
-                // 为每块必需灵石在洞口登记需求形状（愈合时校验形状组合）
-                hole.AddRequiredShapeEntry(piece);
-                CreateLingShi(levelConfig, piece, GetSpawnPosition(), hole.GetHoleId());
-            }
-            // 一次发多块只播一次，避免叠音
-            if (pieces.Count > 0)
+            var remaining = new List<Vector2Int>(cells);
+            int packed = PackExistingStones(remaining);
+
+            var pieces = remaining.Count > 0
+                ? ShapeCutter.Cut(remaining, shapePoolConfig, maxPiecesPerHole, random)
+                : new List<List<Vector2Int>>();
+
+            EnqueuePieces(pieces, holeSpawnStagger);
+            if (packed > 0 || pieces.Count > 0)
             {
                 AudioManager.Instance?.PlaySfx(SfxId.Spawn);
             }
+        }
+
+        /// <summary>
+        /// 兜底补给（方案 D 核心）：库存格数不足以填满所有开放洞时，按「各洞当前剩余空格」补石。
+        /// 只切剩余空格而不是重切整洞，保证切出来的块一定塞得进该洞；
+        /// 逐洞处理、不跨洞混切。
+        /// </summary>
+        public void EnsureSupply(LevelConfig levelConfig)
+        {
+            if (gridManager == null || levelConfig == null || shapePoolConfig == null)
+            {
+                return;
+            }
+
+            var holes = new List<Hole>();
+            int need = 0;
+            foreach (Hole hole in gridManager.GetAllHoles())
+            {
+                if (hole == null || hole.IsClosing())
+                {
+                    continue;
+                }
+                holes.Add(hole);
+                need += hole.GetRemainingCellCount();
+            }
+            if (need <= 0)
+            {
+                return;
+            }
+
+            int have = GetTotalCellCount();
+            int deficit = ComputeDeficit(need, have, GetPendingCellCount(), supplyMargin);
+            if (deficit <= 0)
+            {
+                LogWasteStats(holes);
+                return;
+            }
+
+            // 先补剩余最多的洞，减少玩家"没石头可用"的等待
+            holes.Sort((a, b) => b.GetRemainingCellCount().CompareTo(a.GetRemainingCellCount()));
+            foreach (Hole hole in holes)
+            {
+                if (deficit <= 0)
+                {
+                    break;
+                }
+                List<Vector2Int> unfilled = GetUnfilledCells(hole);
+                if (unfilled.Count == 0)
+                {
+                    continue;
+                }
+                var pieces = ShapeCutter.Cut(unfilled, shapePoolConfig, maxPiecesPerHole, random);
+                foreach (List<Vector2Int> piece in pieces)
+                {
+                    if (deficit <= 0)
+                    {
+                        break;
+                    }
+                    EnqueuePieces(new List<List<Vector2Int>> { piece }, supplyStagger);
+                    deficit -= piece.Count;
+                }
+            }
+        }
+
+        /// <summary>把现有石头塞进这批格子里（能塞的都算覆盖），返回顶替的块数。</summary>
+        private int PackExistingStones(List<Vector2Int> remaining)
+        {
+            var free = new HashSet<Vector2Int>(remaining);
+            int packed = 0;
+            // 大块优先：大块更难找到位置，先用掉能减少后续碎片
+            var candidates = new List<LingShi>(lingShiList);
+            candidates.Sort((a, b) => ShapeCellCount(b).CompareTo(ShapeCellCount(a)));
+            foreach (LingShi ls in candidates)
+            {
+                if (ls == null || ls.GetState() == LingShiState.Placed)
+                {
+                    continue;
+                }
+                List<Vector2Int> shape = ls.GetCurrentCells();
+                if (!TryFit(shape, free))
+                {
+                    continue;
+                }
+                foreach (Vector2Int cell in shape)
+                {
+                    free.Remove(cell);
+                }
+                packed++;
+            }
+            remaining.Clear();
+            remaining.AddRange(free);
+            return packed;
+        }
+
+        /// <summary>
+        /// 补给缺口计算：还需要补多少格。
+        /// = 全部开放洞剩余空格 + 余量 − 库存格数 − 已在队列里待生成的格数。
+        /// 抽成静态方法便于单测（2026-10-27 方案 D）。
+        /// </summary>
+        public static int ComputeDeficit(int needCells, int haveCells, int pendingCells, int margin)
+        {
+            return needCells + Mathf.Max(0, margin) - Mathf.Max(0, haveCells) - Mathf.Max(0, pendingCells);
+        }
+
+        /// <summary>形状的格子能否全部落在 free 里（允许平移）。</summary>
+        public static bool TryFit(List<Vector2Int> shape, HashSet<Vector2Int> free)
+        {
+            if (shape == null || shape.Count == 0 || free.Count < shape.Count)
+            {
+                return false;
+            }
+            foreach (Vector2Int anchor in free)
+            {
+                bool ok = true;
+                foreach (Vector2Int offset in shape)
+                {
+                    if (!free.Contains(new Vector2Int(anchor.x + offset.x, anchor.y + offset.y)))
+                    {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (ok)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>洞里还没被填上的格子（补给按这个轮廓切石）。</summary>
+        private List<Vector2Int> GetUnfilledCells(Hole hole)
+        {
+            var result = new List<Vector2Int>();
+            foreach (Vector2Int cell in hole.GetCells())
+            {
+                if (gridManager.GetCell(cell.x, cell.y) == GridManager.CellHole)
+                {
+                    result.Add(cell);
+                }
+            }
+            return result;
+        }
+
+        /// <summary>库存总格数（不含已放到洞里的块）：背篓 + 锅里 + 暂存都算。</summary>
+        public int GetTotalCellCount()
+        {
+            int total = 0;
+            foreach (LingShi ls in lingShiList)
+            {
+                if (ls == null || ls.GetState() == LingShiState.Placed)
+                {
+                    continue;
+                }
+                total += ShapeCellCount(ls);
+            }
+            return total;
+        }
+
+        private int GetPendingCellCount()
+        {
+            int total = 0;
+            foreach (PendingPiece piece in pendingPieces)
+            {
+                if (piece.cells != null)
+                {
+                    total += piece.cells.Count;
+                }
+            }
+            return total;
+        }
+
+        private static int ShapeCellCount(LingShi ls)
+        {
+            return ls != null ? ls.GetCurrentCells().Count : 0;
+        }
+
+        /// <summary>某块石头是否已经塞不进任何一个开放洞（废石判定，仅统计用）。</summary>
+        public bool IsWasteStone(LingShi ls)
+        {
+            if (ls == null || gridManager == null)
+            {
+                return false;
+            }
+            var shape = ls.GetCurrentCells();
+            foreach (Hole hole in gridManager.GetAllHoles())
+            {
+                if (hole == null || hole.IsClosing())
+                {
+                    continue;
+                }
+                if (TryFit(shape, new HashSet<Vector2Int>(GetUnfilledCells(hole))))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /// <summary>废石观测：定期打一条统计日志（方案 D 先观测，不自动销毁）。</summary>
+        private void LogWasteStats(List<Hole> holes)
+        {
+            if (Time.unscaledTime - lastWasteLogTime < wasteLogInterval)
+            {
+                return;
+            }
+            int waste = 0;
+            int total = 0;
+            foreach (LingShi ls in lingShiList)
+            {
+                if (ls == null || ls.GetState() == LingShiState.Placed)
+                {
+                    continue;
+                }
+                total++;
+                if (IsWasteStone(ls))
+                {
+                    waste++;
+                }
+            }
+            if (waste == 0)
+            {
+                return;
+            }
+            lastWasteLogTime = Time.unscaledTime;
+            Debug.Log($"[补给] 开放洞 {holes.Count} 个，库存 {total} 块，其中放不进任何洞的废石 {waste} 块" +
+                      $"（{(total > 0 ? waste * 100f / total : 0f):0.0}%）");
+        }
+
+        /// <summary>
+        /// 丢弃一块石头（方案 D 预留出口）：从库存移除并销毁，不返还灵气。
+        /// 目前只作为扩展点，未绑定到玩家输入，等废石观测数据出来再决定是否开放。
+        /// </summary>
+        public bool TryDiscard(LingShi ls)
+        {
+            if (ls == null)
+            {
+                return false;
+            }
+            lingShiList.Remove(ls);
+            AudioManager.Instance?.PlaySfx(SfxId.Invalid);
+            Destroy(ls.gameObject);
+            return true;
+        }
+
+        /// <summary>入队待生成的石头；EditMode（非运行态）直接同步生成，方便测试。</summary>
+        private void EnqueuePieces(List<List<Vector2Int>> pieces, float stagger)
+        {
+            if (pieces == null || pieces.Count == 0)
+            {
+                return;
+            }
+            var levelConfig = FindLevelConfig();
+            if (levelConfig == null)
+            {
+                return;
+            }
+            if (!Application.isPlaying)
+            {
+                // EditMode 测试没有协程，直接生成
+                foreach (List<Vector2Int> piece in pieces)
+                {
+                    CreateLingShi(levelConfig, piece, GetSpawnPosition());
+                }
+                return;
+            }
+            foreach (List<Vector2Int> piece in pieces)
+            {
+                pendingPieces.Enqueue(new PendingPiece { cells = piece, generation = spawnGeneration });
+            }
+            if (spawnRoutine == null)
+            {
+                spawnRoutine = StartCoroutine(SpawnQueueRoutine(stagger));
+            }
+        }
+
+        private System.Collections.IEnumerator SpawnQueueRoutine(float stagger)
+        {
+            var levelConfig = FindLevelConfig();
+            while (pendingPieces.Count > 0)
+            {
+                PendingPiece piece = pendingPieces.Dequeue();
+                if (piece.cells != null && piece.generation == spawnGeneration && levelConfig != null)
+                {
+                    CreateLingShi(levelConfig, piece.cells, GetSpawnPosition());
+                }
+                if (pendingPieces.Count > 0)
+                {
+                    yield return new WaitForSeconds(stagger);
+                }
+            }
+            spawnRoutine = null;
+        }
+
+        /// <summary>作废所有待生成项（洞愈合 / 合并 / 重开关卡时调用）。</summary>
+        public void InvalidatePendingSpawns()
+        {
+            spawnGeneration++;
+            pendingPieces.Clear();
+        }
+
+        private LevelConfig FindLevelConfig()
+        {
+            if (gridManager != null && gridManager.GetLevelConfig() != null)
+            {
+                return gridManager.GetLevelConfig();
+            }
+            return null;
         }
 
         /// <summary>工作台暂存灵石回落：保持 Cooked 状态，插值缩放回背篓。</summary>
@@ -259,49 +591,6 @@ namespace MendingtheSky
             ls.SetPhysicsBodyType(RigidbodyType2D.Dynamic);
             ls.SetSimulated(true);
             ls.SetVelocity(new Vector2(((float)random.NextDouble() - 0.5f) * 0.4f, 0f));
-        }
-
-        /// <summary>
-        /// 冗余补给：可用数量低于阈值时补 redundantCount 块。
-        /// 形状从「开放洞口的剩余形状清单」中抽取（同形状替补）：
-        /// 这样冗余灵石一定能用上，且不会产生无法匹配任何清单的垃圾形状。
-        /// </summary>
-        private void TryAddRedundant(LevelConfig levelConfig)
-        {
-            if (GetAvailableCount() >= levelConfig.GetRedundantThreshold())
-            {
-                return;
-            }
-            for (int i = 0; i < levelConfig.GetRedundantCount(); i++)
-            {
-                List<Vector2Int> cells = PickShapeFromOpenHoles();
-                if (cells != null)
-                {
-                    CreateLingShi(levelConfig, cells, GetSpawnPosition());
-                }
-            }
-        }
-
-        /// <summary>从所有开放洞的剩余形状清单中随机取一个形状；没有清单时退回形状池随机。</summary>
-        private List<Vector2Int> PickShapeFromOpenHoles()
-        {
-            if (gridManager != null)
-            {
-                var candidates = new List<List<Vector2Int>>();
-                foreach (Hole hole in gridManager.GetAllHoles())
-                {
-                    if (hole.IsClosing())
-                    {
-                        continue;
-                    }
-                    candidates.AddRange(hole.GetRequiredShapeEntries());
-                }
-                if (candidates.Count > 0)
-                {
-                    return new List<Vector2Int>(candidates[random.Next(candidates.Count)]);
-                }
-            }
-            return PickRandomShapeCells();
         }
 
         private List<Vector2Int> PickRandomShapeCells()

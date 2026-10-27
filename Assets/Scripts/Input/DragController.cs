@@ -25,6 +25,9 @@ namespace MendingtheSky
         [SerializeField] private GridManager gridManager;
         [SerializeField] private GridVisual gridVisual;
         [SerializeField] private InventoryManager inventoryManager;
+        [Tooltip("放置/取下后触发补给账算的最小间隔（秒），避免每帧刷")]
+        [SerializeField] private float supplyCheckInterval = 1f;
+        private float lastSupplyCheck;
         [Tooltip("锅管理器（阶段 4 接入；未配置时锅分支自动跳过）")]
         [SerializeField] private PotManager potManager;
         [Tooltip("游戏总控（阶段 4 接入；用于暂停/结算时禁用拖拽输入）")]
@@ -175,6 +178,7 @@ namespace MendingtheSky
                     // 自由放置优先，拼错可点选取下重摆。
                     gridManager.FillCells(ls, anchor.x, anchor.y);
                     AudioManager.Instance?.PlaySfx(SfxId.Place);
+                    RequestSupplyCheck();
                     ls.SetTransparent(false);
                     ls.SetTargetScale(1f);
                     StartCoroutine(SnapToCell(ls, anchor));
@@ -353,7 +357,45 @@ namespace MendingtheSky
             gridManager.UnfillCells(target);
             target.SetState(LingShiState.Cooked);
             inventoryManager.ReturnToBasket(target);
+            RequestSupplyCheck();
             Debug.Log("[DragController] 右键取下了一块灵石（已放回背篓）");
+        }
+
+        /// <summary>
+        /// 丢弃一块石头（方案 D 预留出口）：从库存移除并销毁，不返还灵气。
+        /// 目前未绑定到玩家输入，等废石观测数据出来再决定是否开放。
+        /// </summary>
+        public bool TryDiscard(LingShi ls)
+        {
+            if (ls == null || inventoryManager == null)
+            {
+                return false;
+            }
+            if (ls.GetState() == LingShiState.Placed)
+            {
+                return false; // 已放进洞里的不能直接丢，先取下
+            }
+            bool ok = inventoryManager.TryDiscard(ls);
+            if (ok)
+            {
+                Debug.Log("[DragController] 丢弃了一块石头");
+            }
+            return ok;
+        }
+
+        /// <summary>节流触发一次补给账算（放置/取下后调用，避免每帧都算）。</summary>
+        private void RequestSupplyCheck()
+        {
+            if (gridManager == null || inventoryManager == null)
+            {
+                return;
+            }
+            if (Time.unscaledTime - lastSupplyCheck < supplyCheckInterval)
+            {
+                return;
+            }
+            lastSupplyCheck = Time.unscaledTime;
+            inventoryManager.EnsureSupply(gridManager.GetLevelConfig());
         }
 
         private LingShi TryPickUp(Vector2 screenPos)

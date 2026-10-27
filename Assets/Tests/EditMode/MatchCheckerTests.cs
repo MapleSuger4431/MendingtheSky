@@ -191,7 +191,6 @@ namespace MendingtheSky.Tests
             // 清单只影响「预览颜色」（MatchChecker.GetPreviewHint）与「填满后是否愈合」。
             Hole hole = gridManager.GetAllHoles()[0];
             List<Vector2Int> pair = FindAdjacentPair(hole);
-            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
 
             LingShi single = CreatePiece(new List<Vector2Int> { Vector2Int.zero });
             Assert.IsTrue(MatchChecker.CanPlace(single, pair[0].x, pair[0].y, gridManager),
@@ -203,7 +202,6 @@ namespace MendingtheSky.Tests
         {
             Hole hole = gridManager.GetAllHoles()[0];
             List<Vector2Int> pair = FindAdjacentPair(hole);
-            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
             LingShi piece = CreatePiece(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) },
                 hole.GetHoleId());
             Assert.AreEqual(PreviewHint.Valid,
@@ -211,20 +209,6 @@ namespace MendingtheSky.Tests
                 "清单里还有这个形状的额度 → 绿色");
         }
 
-        [Test]
-        public void GetPreviewHint_ShapeNotInList_ReturnsShapeNotInHole()
-        {
-            Hole hole = gridManager.GetAllHoles()[0];
-            List<Vector2Int> pair = FindAdjacentPair(hole);
-            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero }); // 清单里只有单格
-            LingShi piece = CreatePiece(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) },
-                hole.GetHoleId());
-            Assert.AreEqual(PreviewHint.ShapeNotInHole,
-                MatchChecker.GetPreviewHint(piece, pair[0].x, pair[0].y, gridManager),
-                "几何可放但清单里没有这个形状 → 黄色");
-            Assert.IsTrue(MatchChecker.CanPlace(piece, pair[0].x, pair[0].y, gridManager),
-                "黄色只是警告，仍然允许放下（自由放置优先）");
-        }
 
         [Test]
         public void GetPreviewHint_NotPlaceable_ReturnsInvalid()
@@ -237,47 +221,6 @@ namespace MendingtheSky.Tests
                 MatchChecker.GetPreviewHint(piece, normal.x, normal.y, gridManager));
         }
 
-        [Test]
-        public void GetPreviewHint_QuotaCountsDownWhenPlaced_AndRestoresWhenRemoved()
-        {
-            // 2026-10-25 定稿：额度 = 清单条目数 − 洞内已放的非冗余同形状块数，实时计算
-            Hole hole = gridManager.GetAllHoles()[0];
-            List<Vector2Int> pair = FindAdjacentPair(hole);
-            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) });
 
-            LingShi another = CreatePiece(
-                new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, hole.GetHoleId());
-            Assert.AreEqual(PreviewHint.Valid,
-                MatchChecker.GetPreviewHint(another, pair[0].x, pair[0].y, gridManager),
-                "还没放时额度为 1 → 绿色");
-
-            // 模拟放入一块同形状：清单那一条被抵扣，额度归零
-            LingShi placedPiece = CreatePiece(
-                new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, hole.GetHoleId());
-            hole.AddLingShi(placedPiece);
-            Assert.AreEqual(PreviewHint.ShapeNotInHole,
-                MatchChecker.GetPreviewHint(another, pair[0].x, pair[0].y, gridManager),
-                "额度用完 → 黄色");
-
-            // 模拟抠出来：额度恢复
-            hole.RemoveLingShi(placedPiece);
-            Assert.AreEqual(PreviewHint.Valid,
-                MatchChecker.GetPreviewHint(another, pair[0].x, pair[0].y, gridManager),
-                "抠出来后额度恢复 → 绿色");
-        }
-
-        [Test]
-        public void GetPreviewHint_RedundantPiece_AlwaysValid()
-        {
-            // 冗余补给灵石（sourceHoleId == -1）没有来源洞，可以顶任意位置 → 绿色
-            Hole hole = gridManager.GetAllHoles()[0];
-            List<Vector2Int> pair = FindAdjacentPair(hole);
-            hole.AddRequiredShapeEntry(new List<Vector2Int> { Vector2Int.zero }); // 清单里没有二连
-            LingShi redundant = CreatePiece(
-                new List<Vector2Int> { Vector2Int.zero, new Vector2Int(0, 1) }, -1);
-            Assert.AreEqual(PreviewHint.Valid,
-                MatchChecker.GetPreviewHint(redundant, pair[0].x, pair[0].y, gridManager),
-                "冗余灵石不参与清单校验，应为绿色");
-        }
     }
 }

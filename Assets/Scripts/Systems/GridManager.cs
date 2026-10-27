@@ -178,6 +178,12 @@ namespace MendingtheSky
         /// 调试入口：等价于 Tick 内的一次成功生成（计数 + 生成 + 只给新增格子发石）。
         /// 对应文档阶段 1 验证点「手动调 TrySpawnNewHole 能加新洞」。
         /// </summary>
+        /// <summary>当前关卡配置（补给系统需要读灵石种类池等信息）。</summary>
+        public LevelConfig GetLevelConfig()
+        {
+            return levelConfig;
+        }
+
         /// <summary>无尽模式难度：新洞的额外格数（0 = 关卡原始尺寸）。</summary>
         public void SetHoleCellBonus(int bonus)
         {
@@ -629,8 +635,9 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 洞口是否已填满：满且未闭合 → 校验「已放置灵石的形状组合」是否符合需求清单，
-        /// 符合才进入闭合（2026-10-25 用户设计：自由放置，愈合时判定；冗余灵石不参与校验）。
+        /// 洞口是否已填满：满且未闭合 → 直接进入闭合。
+        /// 2026-10-27 方案 D 定稿：愈合不再校验形状组合（填满即愈合），
+        /// 形状清单已整体移除，兜底交给「按缺口补给」。
         /// </summary>
         public void CheckHoleClosed(Hole hole)
         {
@@ -638,40 +645,7 @@ namespace MendingtheSky
             {
                 return;
             }
-            if (!hole.MatchesPlacedShapes())
-            {
-                // 诊断日志（2026-10-25 用户要求：先只给 Debug，不走 HUD）：
-                // 洞内多出来的形状很可能就是其他洞口切出来的，提示玩家取下换回本洞形状。
-                string extra = DescribeShapeCounts(hole.GetUnexpectedShapeEntries());
-                string unused = DescribeShapeCounts(hole.GetMissingShapeEntries());
-                Debug.Log($"[GridManager] 洞口#{hole.GetHoleId()} 已填满，但形状清单不匹配" +
-                          $"（多出：{extra}；清单未用上：{unused}）。" +
-                          "该洞口可能有其他洞口所需要的形状，请取下换回本洞形状后再拼满");
-                return;
-            }
             MarkHoleClosing(hole);
-        }
-
-        /// <summary>把一组形状按名称聚合成「U形×2、L形」这样的可读文本（诊断日志用）。</summary>
-        private static string DescribeShapeCounts(List<List<Vector2Int>> entries)
-        {
-            if (entries == null || entries.Count == 0)
-            {
-                return "无";
-            }
-            var counts = new Dictionary<string, int>();
-            foreach (List<Vector2Int> entry in entries)
-            {
-                string name = ShapeDescriber.Describe(entry);
-                counts.TryGetValue(name, out int count);
-                counts[name] = count + 1;
-            }
-            var parts = new List<string>();
-            foreach (KeyValuePair<string, int> kv in counts)
-            {
-                parts.Add(kv.Value > 1 ? $"{kv.Key}×{kv.Value}" : kv.Key);
-            }
-            return string.Join("、", parts);
         }
 
         /// <summary>

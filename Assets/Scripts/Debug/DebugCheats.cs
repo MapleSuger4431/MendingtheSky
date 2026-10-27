@@ -137,16 +137,7 @@ namespace MendingtheSky
             foreach (Hole hole in holes)
             {
                 List<Vector2Int> cells = hole.GetCells();
-                List<List<Vector2Int>> entries = hole.GetRequiredShapeEntries();
-                int listCells = 0;
-                foreach (List<Vector2Int> entry in entries)
-                {
-                    listCells += entry.Count;
-                }
-
-                string solvable = entries.Count == 0
-                    ? "未登记清单，跳过"
-                    : (ShapeCutter.CanTile(cells, entries) ? "可解" : "不可解");
+                int remaining = hole.GetRemainingCellCount();
 
                 int ownPieces = 0;
                 if (inventoryManager != null)
@@ -162,18 +153,8 @@ namespace MendingtheSky
 
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine($"洞#{hole.GetHoleId()}：{cells.Count} 格 | 已填 {hole.GetNowCellCount()} 格、" +
-                              $"已放 {hole.GetPlacedLingShi().Count} 块 | CanTile={solvable} | 存世本洞灵石 {ownPieces} 块");
+                              $"剩余 {remaining} 格 | 已放 {hole.GetPlacedLingShi().Count} 块 | 存世本洞灵石 {ownPieces} 块");
                 AppendShapeDraw(sb, cells, "  ");
-                sb.AppendLine($"  清单 {entries.Count} 条 / {listCells} 格：");
-                for (int i = 0; i < entries.Count; i++)
-                {
-                    sb.AppendLine($"    [{i + 1}] {ShapeDescriber.Describe(entries[i])}（{entries[i].Count} 格）");
-                    AppendShapeDraw(sb, entries[i], "       ");
-                }
-                if (entries.Count > 0 && listCells != cells.Count)
-                {
-                    sb.AppendLine($"  ⚠ 清单格数({listCells}) ≠ 洞格数({cells.Count})，可能被重复切石登记");
-                }
                 Debug.Log("[Cheats]\n" + sb);
             }
         }

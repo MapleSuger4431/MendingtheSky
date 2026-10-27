@@ -21,6 +21,12 @@ namespace MendingtheSky
         private static SystemLanguage currentLanguage = SystemLanguage.ChineseSimplified;
         private static SystemLanguage fallbackLanguage = SystemLanguage.ChineseSimplified;
 
+        /// <summary>
+        /// 数据库是否已载入。场景加载时 LocalizedText.OnEnable 会早于 GameManager 的 Init 执行，
+        /// 那时取文案必然失败——不是真的缺 key，所以未初始化时不打警告、也不写文本。
+        /// </summary>
+        public static bool IsInitialized { get; private set; }
+
         /// <summary>语言变化时触发，所有挂在场景里的 LocalizedText 与 UIManager 据此刷新。</summary>
         public static event Action OnLanguageChanged;
 
@@ -28,6 +34,7 @@ namespace MendingtheSky
         public static void Init(LocalizationDatabase database)
         {
             tableCache.Clear();
+            IsInitialized = database != null;
             if (database == null)
             {
                 Debug.LogWarning("[L10n] 未配置 LocalizationDatabase，界面会直接显示 key");
@@ -66,6 +73,11 @@ namespace MendingtheSky
             if (string.IsNullOrEmpty(key))
             {
                 return string.Empty;
+            }
+            if (!IsInitialized)
+            {
+                // 场景加载早于 Init：先原样返回 key，Init 后会通过 OnLanguageChanged 统一刷新
+                return key;
             }
             if (TryGet(currentLanguage, key, out string value))
             {
