@@ -27,6 +27,12 @@ namespace MendingtheSky
         /// <summary>音效音量（0-1）的 PlayerPrefs 键。</summary>
         private const string KeySfxVolume = "settings.sfxVolume";
 
+        /// <summary>音乐静音开关的 PlayerPrefs 键。</summary>
+        private const string KeyMusicMuted = "settings.musicMuted";
+
+        /// <summary>音效静音开关的 PlayerPrefs 键。</summary>
+        private const string KeySfxMuted = "settings.sfxMuted";
+
         private const float DefaultVolume = 0.8f;
 
         /// <summary>任意设置变化事件：设置面板与预览/音频系统监听后立即生效。</summary>
@@ -36,6 +42,8 @@ namespace MendingtheSky
         private static bool? cachedShowPlacementPreview;
         private static float? cachedMusicVolume;
         private static float? cachedSfxVolume;
+        private static bool? cachedMusicMuted;
+        private static bool? cachedSfxMuted;
 
         /// <summary>
         /// 是否显示放置预览高亮（默认 true）。
@@ -121,6 +129,78 @@ namespace MendingtheSky
                 PlayerPrefs.Save();
                 OnChanged?.Invoke();
             }
+        }
+
+        /// <summary>
+        /// 音乐是否被静音（默认 false）。
+        /// 静音是独立开关而不是把音量写成 0：这样滑块位置与音量值不会丢，
+        /// 取消静音时自动回到原来的音量。
+        /// </summary>
+        public static bool MusicMuted
+        {
+            get
+            {
+                if (!cachedMusicMuted.HasValue)
+                {
+                    cachedMusicMuted = PlayerPrefs.GetInt(KeyMusicMuted, 0) == 1;
+                }
+                return cachedMusicMuted.Value;
+            }
+            set
+            {
+                if (MusicMuted == value)
+                {
+                    return;
+                }
+                cachedMusicMuted = value;
+                PlayerPrefs.SetInt(KeyMusicMuted, value ? 1 : 0);
+                PlayerPrefs.Save();
+                OnChanged?.Invoke();
+            }
+        }
+
+        /// <summary>音效是否被静音（默认 false），语义同 MusicMuted。</summary>
+        public static bool SfxMuted
+        {
+            get
+            {
+                if (!cachedSfxMuted.HasValue)
+                {
+                    cachedSfxMuted = PlayerPrefs.GetInt(KeySfxMuted, 0) == 1;
+                }
+                return cachedSfxMuted.Value;
+            }
+            set
+            {
+                if (SfxMuted == value)
+                {
+                    return;
+                }
+                cachedSfxMuted = value;
+                PlayerPrefs.SetInt(KeySfxMuted, value ? 1 : 0);
+                PlayerPrefs.Save();
+                OnChanged?.Invoke();
+            }
+        }
+
+        /// <summary>实际输出的音乐音量：静音时为 0，否则等于 MusicVolume。音频系统只读这个值。</summary>
+        public static float EffectiveMusicVolume => MusicMuted ? 0f : MusicVolume;
+
+        /// <summary>实际输出的音效音量：静音时为 0，否则等于 SfxVolume。</summary>
+        public static float EffectiveSfxVolume => SfxMuted ? 0f : SfxVolume;
+
+        /// <summary>切换音乐静音并返回新状态（设置面板的「静音」按钮直接用）。</summary>
+        public static bool ToggleMusicMuted()
+        {
+            MusicMuted = !MusicMuted;
+            return MusicMuted;
+        }
+
+        /// <summary>切换音效静音并返回新状态。</summary>
+        public static bool ToggleSfxMuted()
+        {
+            SfxMuted = !SfxMuted;
+            return SfxMuted;
         }
     }
 }

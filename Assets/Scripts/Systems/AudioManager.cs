@@ -70,14 +70,14 @@ namespace MendingtheSky
             source.loop = loop;
         }
 
-        /// <summary>把音量设置应用到所有通道（音效音量同时控制熬煮/告急循环）。</summary>
+        /// <summary>把音量设置应用到所有通道（音效音量同时控制熬煮/告急循环）。静音由 Effective* 统一折算为 0。</summary>
         private void ApplyVolumes()
         {
             if (musicSource != null)
             {
-                musicSource.volume = GameSettings.MusicVolume;
+                musicSource.volume = GameSettings.EffectiveMusicVolume;
             }
-            float sfx = GameSettings.SfxVolume;
+            float sfx = GameSettings.EffectiveSfxVolume;
             if (sfxSource != null)
             {
                 sfxSource.volume = sfx;
@@ -104,7 +104,7 @@ namespace MendingtheSky
                 return;
             }
             musicSource.clip = library.bgmTheme;
-            musicSource.volume = GameSettings.MusicVolume;
+            musicSource.volume = GameSettings.EffectiveMusicVolume;
             musicSource.Play();
         }
 
@@ -160,7 +160,7 @@ namespace MendingtheSky
                 return;
             }
             source.clip = clip;
-            source.volume = GameSettings.SfxVolume;
+            source.volume = GameSettings.EffectiveSfxVolume;
             source.Play();
         }
 

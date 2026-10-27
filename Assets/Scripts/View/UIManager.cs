@@ -86,6 +86,14 @@ namespace MendingtheSky
         [SerializeField] private GameObject settingsPanel;
         [SerializeField] private Slider musicSlider;
         [SerializeField] private Slider sfxSlider;
+        [Tooltip("音乐行的快捷静音按钮：点一下音乐静音，再点恢复（不改变滑块音量）")]
+        [SerializeField] private Button musicMuteButton;
+        [Tooltip("音乐静音按钮上的文字（静音 / 恢复）")]
+        [SerializeField] private TextMeshProUGUI musicMuteText;
+        [Tooltip("音效行的快捷静音按钮")]
+        [SerializeField] private Button sfxMuteButton;
+        [Tooltip("音效静音按钮上的文字")]
+        [SerializeField] private TextMeshProUGUI sfxMuteText;
         [SerializeField] private TextMeshProUGUI musicValueText;
         [SerializeField] private TextMeshProUGUI sfxValueText;
         [SerializeField] private Button settingsLanguageButton;
@@ -399,6 +407,15 @@ namespace MendingtheSky
             {
                 sfxValueText.text = $"{Mathf.RoundToInt(GameSettings.SfxVolume * 100f)}%";
             }
+            // 静音按钮的文字表示「点下去会发生什么」：未静音显示「静音」，已静音显示「恢复」
+            if (musicMuteText != null)
+            {
+                musicMuteText.text = L10n.Get(GameSettings.MusicMuted ? "settings.unmute" : "settings.mute");
+            }
+            if (sfxMuteText != null)
+            {
+                sfxMuteText.text = L10n.Get(GameSettings.SfxMuted ? "settings.unmute" : "settings.mute");
+            }
         }
 
         /// <summary>在设置面板底部显示一条临时提示（例如「键位修改稍后开放」）。</summary>
@@ -576,6 +593,7 @@ namespace MendingtheSky
             AddClickSound(loseRetryButton, loseMenuButton);
             AddClickSound(winRetryButton, winMenuButton);
             AddClickSound(previewToggleButton, languageButton);
+            AddClickSound(musicMuteButton, sfxMuteButton);
             AddClickSound(settingsBackButton, settingsLanguageButton, settingsKeybindButton);
 
             // 主界面
@@ -622,6 +640,8 @@ namespace MendingtheSky
                 musicSlider.wholeNumbers = true;
                 musicSlider.onValueChanged.AddListener(value =>
                 {
+                    // 拖动滑块视为「我要听声音」：顺手解除静音，省得玩家再点一次
+                    GameSettings.MusicMuted = false;
                     GameSettings.MusicVolume = value / 100f;
                     RefreshVolumeLabels();
                 });
@@ -633,7 +653,24 @@ namespace MendingtheSky
                 sfxSlider.wholeNumbers = true;
                 sfxSlider.onValueChanged.AddListener(value =>
                 {
+                    GameSettings.SfxMuted = false;
                     GameSettings.SfxVolume = value / 100f;
+                    RefreshVolumeLabels();
+                });
+            }
+            if (musicMuteButton != null)
+            {
+                musicMuteButton.onClick.AddListener(() =>
+                {
+                    GameSettings.ToggleMusicMuted();
+                    RefreshVolumeLabels();
+                });
+            }
+            if (sfxMuteButton != null)
+            {
+                sfxMuteButton.onClick.AddListener(() =>
+                {
+                    GameSettings.ToggleSfxMuted();
                     RefreshVolumeLabels();
                 });
             }
