@@ -136,6 +136,9 @@ namespace MendingtheSky
             levelConfig = config;
             Time.timeScale = 1f; // 从暂停/失败状态重开时恢复时间
             filledHoleCount = 0;
+            // 重开局先掐掉上一局残留的循环音（告急心跳 / 熬煮咕嘟）
+            AudioManager.Instance?.StopWarningLoop();
+            AudioManager.Instance?.StopCookLoop();
 
             // 1) 网格与洞
             gridManager.GenerateLevel(config);
@@ -353,7 +356,34 @@ namespace MendingtheSky
 
         private void SetState(GameState newState)
         {
+            GameState oldState = state;
             state = newState;
+            if (oldState == newState)
+            {
+                return;
+            }
+
+            // 离开「进行中」（暂停 / 失败 / 胜利 / 回主界面）时停掉所有循环音效，
+            // 否则结算后告急心跳与熬煮咕嘟会一直响（2026-10-27 用户反馈）
+            if (newState != GameState.Playing)
+            {
+                AudioManager.Instance?.StopWarningLoop();
+                AudioManager.Instance?.StopCookLoop();
+                return;
+            }
+
+            // 暂停 → 继续：按当前状态把循环音重新挂上，避免暂停再继续后永远没声音
+            if (oldState == GameState.Paused)
+            {
+                if (qiManager != null && qiManager.IsWarning())
+                {
+                    AudioManager.Instance?.PlayWarningLoop();
+                }
+                if (potManager != null && potManager.GetCookingLingShi().Count > 0)
+                {
+                    AudioManager.Instance?.PlayCookLoop();
+                }
+            }
         }
 
         private void OnDestroy()
