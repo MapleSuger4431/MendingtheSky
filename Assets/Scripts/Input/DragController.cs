@@ -281,6 +281,8 @@ namespace MendingtheSky
             ls.SetTransparent(false);
             ls.SetTargetScale(basketScale);
             inventoryManager.ReturnToBasket(ls);
+            // 灵石落回背篓的「放石头」音效（拖回篓里、锅满退回都走这里）
+            AudioManager.Instance?.PlaySfx(SfxId.Put);
         }
 
         /// <summary>把暂存灵石送回背篓；except 为正在被拾取的那块（从暂存列表移除但不回收）。</summary>
