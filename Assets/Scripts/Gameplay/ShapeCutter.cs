@@ -19,12 +19,16 @@ namespace MendingtheSky
             {
                 rng = new System.Random();
             }
+            // 目标块数不能低于「用池里最大形状铺满」的物理下限：
+            // 池里最大 4 格时，45 格合并洞最少也要 12 块，再要求 8 块只会白跑 30 次重试。
+            // 反过来小洞仍按 maxPieces 收紧，避免放宽后第一次切出 9 块就收工、白白多出碎块。
+            int targetPieces = Mathf.Max(maxPieces, GetTheoreticalMinPieces(holeCells.Count, shapePool));
             List<List<Vector2Int>> best = null;
             int bestCount = int.MaxValue;
             for (int attempt = 0; attempt < 30; attempt++)
             {
                 List<List<Vector2Int>> result = TryCutOnce(holeCells, shapePool, rng);
-                if (result.Count <= maxPieces)
+                if (result.Count <= targetPieces)
                 {
                     return result;
                 }
@@ -35,6 +39,27 @@ namespace MendingtheSky
                 }
             }
             return best;
+        }
+
+        /// <summary>池里最大形状铺满该洞所需的块数（理论下限）；池为空时退化为每格一块。</summary>
+        private static int GetTheoreticalMinPieces(int cellCount, ShapePoolConfig shapePool)
+        {
+            int maxCells = 0;
+            if (shapePool != null)
+            {
+                foreach (ShapeEntry entry in shapePool.GetShapes())
+                {
+                    if (entry != null && entry.cells != null && entry.cells.Count > maxCells)
+                    {
+                        maxCells = entry.cells.Count;
+                    }
+                }
+            }
+            if (maxCells <= 1)
+            {
+                return Mathf.Max(1, cellCount);
+            }
+            return Mathf.CeilToInt(cellCount / (float)maxCells);
         }
 
         private static List<List<Vector2Int>> TryCutOnce(List<Vector2Int> holeCells,

@@ -13,7 +13,7 @@
       }
     },
     "cn.tuanjie.codely.bridge": {
-      "version": "1.0.87",
+      "version": "1.0.88",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -50,8 +50,8 @@
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.unity.2d.sprite": "1.0.0",
         "com.unity.2d.common": "6.0.6",
+        "com.unity.2d.sprite": "1.0.0",
         "com.unity.mathematics": "1.2.6",
         "com.unity.modules.animation": "1.0.0"
       },
@@ -84,9 +84,9 @@
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.unity.2d.animation": "9.2.0",
         "com.unity.2d.common": "8.1.0",
-        "com.unity.2d.sprite": "1.0.0"
+        "com.unity.2d.sprite": "1.0.0",
+        "com.unity.2d.animation": "9.2.0"
       },
       "url": "https://packages.tuanjie.cn"
     },
@@ -101,8 +101,8 @@
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.unity.mathematics": "1.1.0",
         "com.unity.2d.common": "8.1.0",
+        "com.unity.mathematics": "1.1.0",
         "com.unity.modules.physics2d": "1.0.0"
       },
       "url": "https://packages.tuanjie.cn"
@@ -121,9 +121,9 @@
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.unity.modules.tilemap": "1.0.0",
-        "com.unity.2d.tilemap": "1.0.0",
         "com.unity.ugui": "1.0.0",
+        "com.unity.2d.tilemap": "1.0.0",
+        "com.unity.modules.tilemap": "1.0.0",
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.tuanjie.cn"
