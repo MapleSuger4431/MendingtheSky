@@ -366,6 +366,19 @@ namespace MendingtheSky
                     collider.enabled = false;
                 }
             }
+            else
+            {
+                // 碰撞体尺寸必须与「格子」挂钩，不能跟着贴图尺寸走：
+                // 512px 贴图会让 block 缩放只有 0.09 倍，1×1 的 BoxCollider 也只剩格子的 1/5，
+                // 表现为「只有点中心才抓得到」+「石头互相插进对方身体里」。
+                float effectiveScale = Mathf.Max(0.0001f, block.transform.lossyScale.x);
+                float localSize = cellSize * 0.98f / effectiveScale;
+                foreach (BoxCollider2D box in block.GetComponentsInChildren<BoxCollider2D>())
+                {
+                    box.size = new Vector2(localSize, localSize);
+                    box.offset = Vector2.zero;
+                }
+            }
             blockInstances.Add(block);
         }
 
