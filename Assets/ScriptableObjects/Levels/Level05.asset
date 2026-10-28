@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 081ae5a061a263c488d45ddbbabad2f7, type: 3}
+  m_Name: Level05
+  m_EditorClassIdentifier: 
+  levelId: 5
+  displayName: "\u96E8\u6C34 \xB7 \u4E8C\u5019"
+  isEndless: 0
+  seed: 1005
+  minRows: 10
+  maxRows: 15
+  minCols: 30
+  maxCols: 70
+  cellSize: 0.6
+  holeCount: 4
+  totalHoles: 14
+  minHoleSize: 11
+  maxHoleSize: 32
+  maxMergedHoleSize: 45
+  minHoleRows: 3
+  maxHoleRows: 5
+  minHoleCols: 3
+  maxHoleCols: 6
+  mergeChance: 0.3
+  holeSpawnInterval: 5
+  initialQi: 120
+  qiPerCellPerSecond: 0.034
+  redundantCount: 2
+  redundantThreshold: 4
+  potMaxCount: 3
+  initialRotationChance: 0.6
+  endlessDifficulty:
+    costIncreasePerHole: 0.02
+    maxCostMultiplier: 3
+    cellsTierHoles: 5
+    cellsPerTier: 1
+    maxCellBonus: 15
+    intervalTierHoles: 5
+    intervalReducePerTier: 0
+    minIntervalMultiplier: 0.6
+  lingShiTypePool:
+  - typeConfig: {fileID: 11400000, guid: db5d1f67c4530cd4a8dcef3428e0beab, type: 2}
+    weight: 1
+  - typeConfig: {fileID: 11400000, guid: bc624812b6634b649a74d79f50eb7180, type: 2}
+    weight: 1
+  - typeConfig: {fileID: 11400000, guid: 21f3160bff928f04fb3cdd3bd49c7e8f, type: 2}
+    weight: 1

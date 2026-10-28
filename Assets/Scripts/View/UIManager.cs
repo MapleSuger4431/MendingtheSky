@@ -367,11 +367,19 @@ namespace MendingtheSky
             }
         }
 
+        /// <summary>
+        /// 关卡按钮文案：普通关优先用叙事名（level.N.name，如「立春 · 初候」），
+        /// 没有配名字时退回「第 N 关」；无尽关显示「无尽模式」。
+        /// </summary>
         private static string FormatLevelEntry(LevelConfig config)
         {
-            return config.IsEndless()
-                ? L10n.Get("hud.endless")
-                : L10n.Get("hud.level", config.GetLevelId());
+            if (config.IsEndless())
+            {
+                return L10n.Get("hud.endless");
+            }
+            string key = $"level.{config.GetLevelId()}.name";
+            string name = L10n.Get(key);
+            return name == key ? L10n.Get("hud.level", config.GetLevelId()) : name;
         }
 
         // ---------------- 设置面板 ----------------
