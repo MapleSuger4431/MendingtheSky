@@ -23,6 +23,8 @@ namespace MendingtheSky
         [SerializeField] private Sprite cookedOutlineSprite;
         [Tooltip("蒙尘遮罩：叠在填充层之上，熬煮过程中按进度渐隐，煮好即关闭")]
         [SerializeField] private Sprite dustOverlaySprite;
+        [Tooltip("蒙尘层相对格子的缩放：<=1 时不会盖住相邻格的接缝，避免几块石头糊成一坨")]
+        [SerializeField] private float dustOverlap = 1f;
         [SerializeField] private float outlineOverlap = 1.32f;
 
         /// <summary>每块灵石独立的排序基准（轮廓=base，填充=base+1），由 InventoryManager 分配。</summary>
@@ -312,7 +314,7 @@ namespace MendingtheSky
                 if (dustOverlaySprite != null && dustAlpha > 0.001f)
                 {
                     // 纯视觉层：必须禁用碰撞体，否则每格多出一个 Collider 会让灵石质量翻倍、拖拽手感发死
-                    CreateBlock(dustOverlaySprite, localPos, blockOverlap, sortingBase + 2,
+                    CreateBlock(dustOverlaySprite, localPos, dustOverlap, sortingBase + 2,
                         new Color(1f, 1f, 1f, dustAlpha), true);
                     GameObject dustBlock = blockInstances.Count > 0 ? blockInstances[blockInstances.Count - 1] : null;
                     SpriteRenderer dustSr = dustBlock != null ? dustBlock.GetComponentInChildren<SpriteRenderer>() : null;
