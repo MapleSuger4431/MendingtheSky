@@ -105,10 +105,16 @@ namespace MendingtheSky
 
         [Header("关卡选择")]
         [SerializeField] private GameObject levelSelectPanel;
-        [Tooltip("关卡按钮的父物体（建议挂 VerticalLayoutGroup）")]
+        [Tooltip("日历格的父物体（不要挂 LayoutGroup，位置由代码按 4×2 计算）")]
         [SerializeField] private Transform levelSelectContent;
-        [Tooltip("关卡按钮模板：会被隐藏，按数据库条目复制")]
+        [Tooltip("日历日格预设体（CalendarDayCell）：会被隐藏，按关卡数量复制")]
         [SerializeField] private Button levelSelectTemplate;
+        [Tooltip("可玩未通关的日格底图")]
+        [SerializeField] private Sprite dayCellSprite;
+        [Tooltip("已通关的日格底图")]
+        [SerializeField] private Sprite clearedCellSprite;
+        [Tooltip("日历页眉文本（显示「立春 — 惊蛰」这样的范围）")]
+        [SerializeField] private TextMeshProUGUI levelSelectTitleText;
         [SerializeField] private Button levelSelectBackButton;
         [Tooltip("生成关卡列表用的数据库（与 GameManager 指向同一份）")]
         [SerializeField] private LevelDatabase levelDatabase;
@@ -317,46 +323,67 @@ namespace MendingtheSky
             }
             levelSelectTemplate.gameObject.SetActive(false);
 
+            int slot = 0;
+            string firstBanner = null;
+            string lastBanner = null;
+
             for (int i = 0; i < levelDatabase.GetTotalLevels(); i++)
             {
                 LevelConfig config = levelDatabase.GetLevel(i);
-                if (config == null)
+                if (config == null || config.IsEndless())
                 {
-                    continue;
+                    continue; // 无尽模式不占日历格（主界面已有入口）
                 }
+
                 int index = i;
-                Button button = Instantiate(levelSelectTemplate, levelSelectContent);
-                button.gameObject.SetActive(true);
-                button.name = $"LevelButton_{i}";
+                Button cell = Instantiate(levelSelectTemplate, levelSelectContent);
+                cell.gameObject.SetActive(true);
+                cell.name = $"DayCell_{slot}";
+                cell.GetComponent<RectTransform>().anchoredPosition = CellPosition(slot);
 
-                // 顺序解锁 + 星级（2026-10-28）：未解锁的关卡灰掉且不可点
-                bool unlocked = LevelProgress.IsUnlocked(levelDatabase, i);
-                string stars = LevelProgress.FormatStars(config.GetLevelId());
-                button.interactable = unlocked;
+                bool unlocked = LevelProgress.IsUnlocked(levelDatabase, index);
+                int stars = LevelProgress.GetStars(config.GetLevelId());
 
-                TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>(true);
-                if (label != null)
+                // 三态：已通关用通关图；未解锁压暗去饱和；其余用默认日格
+                Image background = cell.GetComponent<Image>();
+                if (background != null)
                 {
-                    // 关卡按钮文案由本方法生成（含关卡 id / 无尽标记），不挂 LocalizedText
-                    LocalizedText existing = label.GetComponent<LocalizedText>();
-                    if (existing != null)
-                    {
-                        Destroy(existing);
-                    }
-                    string entry = FormatLevelEntry(config);
-                    if (!unlocked)
-                    {
-                        entry += L10n.Get("level.locked_suffix");
-                    }
-                    else if (!string.IsNullOrEmpty(stars))
-                    {
-                        entry += "  " + stars;
-                    }
-                    label.text = entry;
+                    background.sprite = (unlocked && stars > 0) ? clearedCellSprite : dayCellSprite;
+                    background.color = unlocked ? Color.white : new Color(0.86f, 0.86f, 0.90f, 1f);
                 }
-                button.onClick.RemoveAllListeners();
-                AddClickSound(button);
-                button.onClick.AddListener(() =>
+                cell.interactable = unlocked;
+
+                string entry = FormatLevelEntry(config);
+                TextMeshProUGUI numberText = cell.transform.Find("DayNumber")?.GetComponent<TextMeshProUGUI>();
+                if (numberText != null)
+                {
+                    numberText.text = (slot + 1).ToString();
+                }
+                TextMeshProUGUI nameText = cell.transform.Find("DayName")?.GetComponent<TextMeshProUGUI>();
+                if (nameText != null)
+                {
+                    nameText.text = entry;
+                }
+
+                // 星级 = 右上角竖排朱印，1~3 枚
+                Transform seals = cell.transform.Find("Seals");
+                if (seals != null)
+                {
+                    for (int s = 0; s < seals.childCount; s++)
+                    {
+                        seals.GetChild(s).gameObject.SetActive(s < stars);
+                    }
+                }
+
+                if (firstBanner == null)
+                {
+                    firstBanner = BannerOf(entry);
+                }
+                lastBanner = BannerOf(entry);
+
+                cell.onClick.RemoveAllListeners();
+                AddClickSound(cell);
+                cell.onClick.AddListener(() =>
                 {
                     HideLevelSelect();
                     if (gameManager != null)
@@ -364,7 +391,32 @@ namespace MendingtheSky
                         gameManager.StartLevelByIndex(index);
                     }
                 });
+                slot++;
             }
+
+            if (levelSelectTitleText != null && firstBanner != null)
+            {
+                levelSelectTitleText.text = firstBanner + " — " + lastBanner;
+            }
+        }
+
+        /// <summary>4 列 × 2 行的格位坐标：格 150、横向间距 40、纵向行距 210。</summary>
+        private static Vector2 CellPosition(int slot)
+        {
+            int column = slot % 4;
+            int row = slot / 4;
+            return new Vector2(-285f + column * 190f, 150f - row * 210f);
+        }
+
+        /// <summary>取「立春 · 初候」里的节气部分，给页眉做「立春 — 惊蛰」范围。</summary>
+        private static string BannerOf(string entry)
+        {
+            if (string.IsNullOrEmpty(entry))
+            {
+                return string.Empty;
+            }
+            int idx = entry.IndexOf('·');
+            return idx > 0 ? entry.Substring(0, idx).Trim() : entry;
         }
 
         /// <summary>
