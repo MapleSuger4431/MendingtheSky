@@ -137,6 +137,8 @@ namespace MendingtheSky
         private float lastDifficultyMultiplier = 1f;
         private int lastFilledHoles;
         private int lastTotalHoles = 1;
+        [Tooltip("最近一次胜利获得的星级（0 = 不显示）")]
+        private int lastStars;
         private int lastEndlessBest;
 
         private void Awake()
@@ -326,6 +328,12 @@ namespace MendingtheSky
                 Button button = Instantiate(levelSelectTemplate, levelSelectContent);
                 button.gameObject.SetActive(true);
                 button.name = $"LevelButton_{i}";
+
+                // 顺序解锁 + 星级（2026-10-28）：未解锁的关卡灰掉且不可点
+                bool unlocked = LevelProgress.IsUnlocked(levelDatabase, i);
+                string stars = LevelProgress.FormatStars(config.GetLevelId());
+                button.interactable = unlocked;
+
                 TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>(true);
                 if (label != null)
                 {
@@ -335,7 +343,16 @@ namespace MendingtheSky
                     {
                         Destroy(existing);
                     }
-                    label.text = FormatLevelEntry(config);
+                    string entry = FormatLevelEntry(config);
+                    if (!unlocked)
+                    {
+                        entry += L10n.Get("level.locked_suffix");
+                    }
+                    else if (!string.IsNullOrEmpty(stars))
+                    {
+                        entry += "  " + stars;
+                    }
+                    label.text = entry;
                 }
                 button.onClick.RemoveAllListeners();
                 AddClickSound(button);
@@ -462,26 +479,37 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>胜利结算（阶段 5 洞闭合后触发）。</summary>
-        public void ShowWin(int filledHoles, int totalHoles)
+        /// <summary>胜利结算（阶段 5 洞闭合后触发）。stars = 本关星级（0 表示不显示）。</summary>
+        public void ShowWin(int filledHoles, int totalHoles, int stars = 0)
         {
             HidePause();
             if (winPanel != null)
             {
                 winPanel.SetActive(true);
             }
-            if (winText != null)
-            {
-                lastFilledHoles = filledHoles;
-                lastTotalHoles = totalHoles;
-                winText.text = L10n.Get("ui.holes_progress", filledHoles, totalHoles);
-            }
+            lastFilledHoles = filledHoles;
+            lastTotalHoles = totalHoles;
+            lastStars = stars;
+            RefreshWinText();
             if (winRetryButtonText != null)
             {
                 // 有下一关显示「下一关」，最后一关显示「再玩一次」
                 winRetryButtonText.text = L10n.Get(
                     gameManager != null && gameManager.HasNextLevel() ? "ui.next_level" : "ui.play_again");
             }
+        }
+
+        /// <summary>胜利文案 = 缺口进度 + 星级（★★☆），语言切换时也要重刷。</summary>
+        private void RefreshWinText()
+        {
+            if (winText == null)
+            {
+                return;
+            }
+            string progress = L10n.Get("ui.holes_progress", lastFilledHoles, lastTotalHoles);
+            winText.text = lastStars > 0
+                ? progress + "  " + new string('★', lastStars) + new string('☆', 3 - lastStars)
+                : progress;
         }
 
         public void HideResult()
@@ -802,7 +830,8 @@ namespace MendingtheSky
             }
             if (winText != null)
             {
-                winText.text = normalProgress;
+                // 星级也要跟着语言刷新，别把 ★ 覆盖掉
+                RefreshWinText();
             }
             if (winRetryButtonText != null)
             {

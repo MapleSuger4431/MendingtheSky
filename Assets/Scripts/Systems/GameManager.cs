@@ -365,8 +365,29 @@ namespace MendingtheSky
                 {
                     dragController.ResetAll();
                 }
-                uiManager.ShowWin(filledHoleCount, levelConfig.GetTotalHoles());
+                // 胜利：按剩余灵气算星级并写入存档（只升不降），再把星级交给胜利面板显示
+                int stars = ComputeStars();
+                LevelProgress.Report(levelConfig.GetLevelId(), stars);
+                uiManager.ShowWin(filledHoleCount, levelConfig.GetTotalHoles(), stars);
             }
+        }
+
+        /// <summary>
+        /// 星级评分（2026-10-28 定稿）：按通关瞬间剩余灵气比例，
+        /// ≥50% 三星、≥25% 两星、其余一星。
+        /// </summary>
+        private int ComputeStars()
+        {
+            float ratio = qiManager != null ? qiManager.GetRatio() : 0f;
+            if (ratio >= 0.5f)
+            {
+                return 3;
+            }
+            if (ratio >= 0.25f)
+            {
+                return 2;
+            }
+            return 1;
         }
 
         public GameState GetState() { return state; }
