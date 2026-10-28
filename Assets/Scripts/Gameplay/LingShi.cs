@@ -77,6 +77,17 @@ namespace MendingtheSky
             RebuildVisual();
         }
 
+        /// <summary>逆时针旋转 90°（拖拽时 Shift+R / 移动端逆时针按钮）。</summary>
+        public void RotateCounterClockwise()
+        {
+            if (!CanRotate())
+            {
+                return;
+            }
+            shape.RotateCounterClockwise();
+            RebuildVisual();
+        }
+
         public List<Vector2Int> GetCurrentCells() { return shape.GetCurrentCells(); }
 
         /// <summary>形状的基础格（未旋转）。可解性校验用：求解器会自行尝试 4 种旋转。</summary>

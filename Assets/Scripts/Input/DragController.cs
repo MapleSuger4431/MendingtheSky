@@ -234,22 +234,65 @@ namespace MendingtheSky
             }
         }
 
+        /// <summary>
+        /// 拖拽中的旋转输入：R 顺时针、Shift+R 逆时针。
+        /// 滚轮不区分方向，任意滚动都算顺时针——滚轮分方向后「上滚」在键盘与滚轮两条路径里
+        /// 会给出相反结果，反而更容易误操作（2026-10-28 用户确认）。
+        /// </summary>
         private void HandleRotateInput()
         {
             if (draggingLingShi == null || !draggingLingShi.CanRotate())
             {
                 return;
             }
-            bool rotate = Input.GetKeyDown(rotateKey);
+            bool clockwise = false;
+            bool counterClockwise = false;
+            if (Input.GetKeyDown(rotateKey))
+            {
+                bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                if (shiftHeld)
+                {
+                    counterClockwise = true;
+                }
+                else
+                {
+                    clockwise = true;
+                }
+            }
             if (useMouseScroll && Mathf.Abs(Input.mouseScrollDelta.y) > 0.01f)
             {
-                rotate = true;
+                clockwise = true;
             }
-            if (rotate)
+
+            if (clockwise)
+            {
+                RotateDragging(true);
+            }
+            else if (counterClockwise)
+            {
+                RotateDragging(false);
+            }
+        }
+
+        /// <summary>
+        /// 旋转当前拖拽的灵石并刷新预览；供键盘输入与移动端按钮共用。
+        /// 未拖拽 / 未煮熟 / 单格形状时安全返回（CanRotate 已含这些判断）。
+        /// </summary>
+        public void RotateDragging(bool clockwise)
+        {
+            if (draggingLingShi == null || !draggingLingShi.CanRotate())
+            {
+                return;
+            }
+            if (clockwise)
             {
                 draggingLingShi.Rotate();
-                UpdatePreview();
             }
+            else
+            {
+                draggingLingShi.RotateCounterClockwise();
+            }
+            UpdatePreview();
         }
 
         private void UpdatePreview()

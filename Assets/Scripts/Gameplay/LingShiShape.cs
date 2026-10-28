@@ -21,9 +21,16 @@ namespace MendingtheSky
             rotationSteps = 0;
         }
 
+        /// <summary>顺时针 90°。</summary>
         public void Rotate()
         {
             rotationSteps = (rotationSteps + 1) % 4;
+        }
+
+        /// <summary>逆时针 90°：等价于顺时针 3 次，复用同一套预计算表，不额外占内存。</summary>
+        public void RotateCounterClockwise()
+        {
+            rotationSteps = (rotationSteps + 3) % 4;
         }
 
         public void ResetRotation()
