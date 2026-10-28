@@ -63,9 +63,13 @@ namespace MendingtheSky
                 ? new System.Random(levelConfig.GetSeed())
                 : new System.Random();
 
-            rows = random.Next(levelConfig.GetMinRows(), levelConfig.GetMaxRows() + 1);
-            cellSize = ComputeFittedCellSize(rows);
+            // 先按配置行数算格子大小（保证格子尺寸不因保留行而变大），
+            // 再把顶部 HUD 保留行直接扣掉：网格里不存在这些行，也就不需要任何额外守卫。
+            int baseRows = random.Next(levelConfig.GetMinRows(), levelConfig.GetMaxRows() + 1);
+            cellSize = ComputeFittedCellSize(baseRows);
             cols = ComputeFittedCols(cellSize);
+            int reserved = Mathf.Clamp(reservedTopRows, 0, Mathf.Max(0, baseRows - 1));
+            rows = Mathf.Max(1, baseRows - reserved);
 
             grid = new int[rows, cols];
             for (int r = 0; r < rows; r++)
@@ -143,7 +147,7 @@ namespace MendingtheSky
             for (int attempt = 0; attempt < maxSpawnAttempts; attempt++)
             {
                 bool allowTouchUnfilled = random.NextDouble() < levelConfig.GetMergeChance();
-                int seedR = random.Next(Mathf.Clamp(reservedTopRows, 0, Mathf.Max(0, rows - 1)), rows);
+                int seedR = random.Next(0, rows);
                 int seedC = random.Next(0, cols);
                 if (!CanSpread(seedR, seedC, allowTouchUnfilled))
                 {
@@ -226,9 +230,7 @@ namespace MendingtheSky
             holes.Clear();
             cellToHole.Clear();
             var cells = new List<Vector2Int>(rows * cols);
-            // 顶部保留行留给 HUD（灵气条/暂停按钮），调试全洞也不越过
-            int firstRow = Mathf.Clamp(reservedTopRows, 0, Mathf.Max(0, rows - 1));
-            for (int r = firstRow; r < rows; r++)
+            for (int r = 0; r < rows; r++)
             {
                 for (int c = 0; c < cols; c++)
                 {
@@ -304,11 +306,6 @@ namespace MendingtheSky
         {
             int r = from.x + dr;
             int c = from.y + dc;
-            // 顶部保留行：洞口不允许蔓延进 HUD 覆盖的区域
-            if (r < reservedTopRows)
-            {
-                return;
-            }
             // 包围盒上限：加入后行/列跨度不得超过 maxHoleRows / maxHoleCols
             if (Mathf.Max(maxR, r) - Mathf.Min(minR, r) + 1 > levelConfig.GetMaxHoleRows())
             {
@@ -545,7 +542,9 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 网格定位：屏幕上方居中（视口 y=0.95 处为网格顶边），绝不硬编码世界坐标。
+        /// 网格定位：底边贴视口 y=0.5 向上铺，绝不硬编码世界坐标。
+        /// 2026-10-28：改为底部锚定——可用行数已经扣掉顶部 HUD 保留行，
+        /// 若仍以 0.95 为顶边，顶部会空出一段、底部反而逼近下方背篓/锅。
         /// 无相机时（EditMode 测试）降级为以世界原点居中。
         /// </summary>
         private void ComputeOrigin()
@@ -557,8 +556,8 @@ namespace MendingtheSky
                 return;
             }
             float distance = Mathf.Abs(cam.transform.position.z);
-            Vector3 topCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 0.95f, distance));
-            origin = new Vector3(topCenter.x - cols * cellSize * 0.5f, topCenter.y, 0f);
+            Vector3 bottomCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, distance));
+            origin = new Vector3(bottomCenter.x - cols * cellSize * 0.5f, bottomCenter.y + rows * cellSize, 0f);
         }
 
         public bool IsInside(int r, int c)
