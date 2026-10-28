@@ -127,8 +127,17 @@ namespace MendingtheSky
             int deficit = ComputeDeficit(need, have, GetPendingCellCount(), supplyMargin);
             if (deficit <= 0)
             {
-                LogWasteStats(holes);
-                return;
+                // 格数够了，但还要检查「形状放不放得进」：
+                // 手上全是大块、缺口只剩 1~2 格时，格数再多也是死局（2026-10-28 实测踩到）。
+                if (!HasAnyPlaceableStone(holes))
+                {
+                    deficit = need;   // 强制按缺口补一批能塞进去的块
+                }
+                else
+                {
+                    LogWasteStats(holes);
+                    return;
+                }
             }
 
             // 先补剩余最多的洞，减少玩家"没石头可用"的等待
@@ -235,6 +244,57 @@ namespace MendingtheSky
                 }
             }
             return result;
+        }
+
+        /// <summary>
+        /// 是否存在「某块库存石头能放进某个开放洞的剩余空格」。
+        /// 只看形状与几何，不看状态（未煮的熬完也能用），用于识别「格数够但形状全放不进」的死局。
+        /// </summary>
+        public bool HasAnyPlaceableStone(List<Hole> holes = null)
+        {
+            if (gridManager == null)
+            {
+                return false;
+            }
+            if (holes == null)
+            {
+                holes = gridManager.GetAllHoles();
+            }
+
+            var shapes = new List<List<Vector2Int>>();
+            foreach (LingShi ls in lingShiList)
+            {
+                if (ls == null || ls.GetState() == LingShiState.Placed)
+                {
+                    continue;
+                }
+                shapes.Add(ls.GetCurrentCells());
+            }
+            if (shapes.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (Hole hole in holes)
+            {
+                if (hole == null || hole.IsClosing())
+                {
+                    continue;
+                }
+                var free = new HashSet<Vector2Int>(GetUnfilledCells(hole));
+                if (free.Count == 0)
+                {
+                    continue;
+                }
+                foreach (List<Vector2Int> shape in shapes)
+                {
+                    if (TryFit(shape, free))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         /// <summary>库存总格数（不含已放到洞里的块）：背篓 + 锅里 + 暂存都算。</summary>
