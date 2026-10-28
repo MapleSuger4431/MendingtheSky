@@ -78,6 +78,14 @@ MonoBehaviour:
       value: "\u97F3\u6548"
     - key: settings.language
       value: "\u8BED\u8A00"
+    - key: settings.rotate_both
+      value: "\u6309\u94AE + \u624B\u52BF"
+    - key: settings.rotate_gesture
+      value: "\u624B\u52BF"
+    - key: settings.rotate_buttons
+      value: "\u6309\u94AE"
+    - key: settings.rotate
+      value: "\u65CB\u8F6C\u65B9\u5F0F"
     - key: settings.keybind
       value: "\u952E\u4F4D\u8BBE\u7F6E\uFF08\u5F85\u5B9A\uFF09"
     - key: settings.keybind_todo
@@ -168,6 +176,14 @@ MonoBehaviour:
       value: "\u97F3\u6548"
     - key: settings.language
       value: "\u8A9E\u8A00"
+    - key: settings.rotate_both
+      value: "\u6309\u9215 + \u624B\u52E2"
+    - key: settings.rotate_gesture
+      value: "\u624B\u52E2"
+    - key: settings.rotate_buttons
+      value: "\u6309\u9215"
+    - key: settings.rotate
+      value: "\u65CB\u8F49\u65B9\u5F0F"
     - key: settings.keybind
       value: "\u6309\u9375\u8A2D\u5B9A\uFF08\u5F85\u5B9A\uFF09"
     - key: settings.keybind_todo
@@ -258,6 +274,14 @@ MonoBehaviour:
       value: SFX
     - key: settings.language
       value: LANGUAGE
+    - key: settings.rotate_both
+      value: Buttons + Gesture
+    - key: settings.rotate_gesture
+      value: Gesture
+    - key: settings.rotate_buttons
+      value: Buttons
+    - key: settings.rotate
+      value: Rotation
     - key: settings.keybind
       value: KEY BINDING (TBD)
     - key: settings.keybind_todo

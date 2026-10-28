@@ -33,6 +33,9 @@ namespace MendingtheSky
         /// <summary>音效静音开关的 PlayerPrefs 键。</summary>
         private const string KeySfxMuted = "settings.sfxMuted";
 
+        /// <summary>旋转输入方式（按钮 / 手势 / 两者）的 PlayerPrefs 键。</summary>
+        private const string KeyRotateMode = "settings.rotateMode";
+
         private const float DefaultVolume = 0.8f;
 
         /// <summary>任意设置变化事件：设置面板与预览/音频系统监听后立即生效。</summary>
@@ -44,6 +47,7 @@ namespace MendingtheSky
         private static float? cachedSfxVolume;
         private static bool? cachedMusicMuted;
         private static bool? cachedSfxMuted;
+        private static RotateInputMode? cachedRotateMode;
 
         /// <summary>
         /// 是否显示放置预览高亮（默认 true）。
@@ -184,10 +188,65 @@ namespace MendingtheSky
         }
 
         /// <summary>实际输出的音乐音量：静音时为 0，否则等于 MusicVolume。音频系统只读这个值。</summary>
-        public static float EffectiveMusicVolume => MusicMuted ? 0f : MusicVolume;
-
-        /// <summary>实际输出的音效音量：静音时为 0，否则等于 SfxVolume。</summary>
+        public static float EffectiveMusicVolume => MusicMuted ? 0f : MusicVolume;        /// <summary>实际输出的音效音量：静音时为 0，否则等于 SfxVolume。</summary>
         public static float EffectiveSfxVolume => SfxMuted ? 0f : SfxVolume;
+
+        /// <summary>
+        /// 旋转输入方式（默认 Buttons）。写入时持久化并广播 OnChanged，
+        /// 拖拽控制器据此决定是否显示屏幕按钮、是否接收双指手势。
+        /// </summary>
+        public static RotateInputMode RotateMode
+        {
+            get
+            {
+                if (!cachedRotateMode.HasValue)
+                {
+                    int raw = PlayerPrefs.GetInt(KeyRotateMode, (int)RotateInputMode.Buttons);
+                    // 夹紧到合法区间，避免改过枚举后读到历史脏值
+                    if (raw < (int)RotateInputMode.Buttons || raw > (int)RotateInputMode.Both)
+                    {
+                        raw = (int)RotateInputMode.Buttons;
+                    }
+                    cachedRotateMode = (RotateInputMode)raw;
+                }
+                return cachedRotateMode.Value;
+            }
+            set
+            {
+                if (RotateMode == value)
+                {
+                    return;
+                }
+                cachedRotateMode = value;
+                PlayerPrefs.SetInt(KeyRotateMode, (int)value);
+                PlayerPrefs.Save();
+                OnChanged?.Invoke();
+            }
+        }
+
+        /// <summary>设置面板「旋转方式」按钮用：按钮 → 手势 → 两者 → 按钮 循环。</summary>
+        public static RotateInputMode CycleRotateMode()
+        {
+            switch (RotateMode)
+            {
+                case RotateInputMode.Buttons:
+                    RotateMode = RotateInputMode.Gesture;
+                    break;
+                case RotateInputMode.Gesture:
+                    RotateMode = RotateInputMode.Both;
+                    break;
+                default:
+                    RotateMode = RotateInputMode.Buttons;
+                    break;
+            }
+            return RotateMode;
+        }
+
+        /// <summary>是否显示屏幕上的顺时针/逆时针按钮。</summary>
+        public static bool RotateButtonsEnabled => RotateMode != RotateInputMode.Gesture;
+
+        /// <summary>是否接收「第二根手指上下滑」的旋转手势。</summary>
+        public static bool RotateGestureEnabled => RotateMode != RotateInputMode.Buttons;
 
         /// <summary>切换音乐静音并返回新状态（设置面板的「静音」按钮直接用）。</summary>
         public static bool ToggleMusicMuted()

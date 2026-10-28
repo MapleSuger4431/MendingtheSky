@@ -98,6 +98,10 @@ namespace MendingtheSky
         [SerializeField] private TextMeshProUGUI sfxValueText;
         [SerializeField] private Button settingsLanguageButton;
         [SerializeField] private TextMeshProUGUI settingsLanguageText;
+        [Tooltip("设置面板：旋转方式（按钮 / 手势 / 两者）循环切换")]
+        [SerializeField] private Button settingsRotateButton;
+        [Tooltip("旋转方式按钮上显示当前选择：按钮 / 手势 / 按钮 + 手势")]
+        [SerializeField] private TextMeshProUGUI settingsRotateText;
         [SerializeField] private Button settingsKeybindButton;
         [Tooltip("键位等未开放功能的临时提示文本")]
         [SerializeField] private TextMeshProUGUI settingsHintText;
@@ -470,6 +474,10 @@ namespace MendingtheSky
             {
                 settingsLanguageText.text = L10n.GetLanguageDisplayName(L10n.GetCurrentLanguage());
             }
+            if (settingsRotateText != null)
+            {
+                settingsRotateText.text = L10n.Get(GetRotateModeKey(GameSettings.RotateMode));
+            }
             if (settingsHintText != null)
             {
                 settingsHintText.text = string.Empty;
@@ -689,7 +697,7 @@ namespace MendingtheSky
             AddClickSound(winRetryButton, winMenuButton);
             AddClickSound(previewToggleButton, languageButton);
             AddClickSound(musicMuteButton, sfxMuteButton);
-            AddClickSound(settingsBackButton, settingsLanguageButton, settingsKeybindButton);
+            AddClickSound(settingsBackButton, settingsLanguageButton, settingsKeybindButton, settingsRotateButton);
 
             // 主界面
             if (menuStartButton != null)
@@ -721,6 +729,11 @@ namespace MendingtheSky
             if (settingsLanguageButton != null)
             {
                 settingsLanguageButton.onClick.AddListener(() => L10n.CycleLanguage());
+            }
+            if (settingsRotateButton != null)
+            {
+                // 循环切换会写入 PlayerPrefs 并广播 OnChanged，RefreshSettingsLabels 会跟着刷新文案
+                settingsRotateButton.onClick.AddListener(() => GameSettings.CycleRotateMode());
             }
             if (settingsKeybindButton != null)
             {
@@ -850,8 +863,22 @@ namespace MendingtheSky
             }
         }
 
+        /// <summary>旋转方式枚举 → L10n key。</summary>
+        private static string GetRotateModeKey(RotateInputMode mode)
+        {
+            switch (mode)
+            {
+                case RotateInputMode.Gesture:
+                    return "settings.rotate_gesture";
+                case RotateInputMode.Both:
+                    return "settings.rotate_both";
+                default:
+                    return "settings.rotate_buttons";
+            }
+        }
+
         /// <summary>
-        /// 刷新设置面板文本（预览高亮 ON/OFF）。
+        /// 刷新设置面板文本（预览高亮 ON/OFF、旋转方式）。
         /// </summary>
         public void RefreshSettingsLabels()
         {
@@ -860,6 +887,10 @@ namespace MendingtheSky
                 previewToggleText.text = L10n.Get(GameSettings.ShowPlacementPreview
                     ? "ui.preview_on"
                     : "ui.preview_off");
+            }
+            if (settingsRotateText != null)
+            {
+                settingsRotateText.text = L10n.Get(GetRotateModeKey(GameSettings.RotateMode));
             }
             if (previewToggleVisual != null)
             {

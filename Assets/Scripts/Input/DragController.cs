@@ -48,6 +48,10 @@ namespace MendingtheSky
         [Tooltip("PC / 编辑器上也显示旋转按钮（默认只在移动端显示，这里打开便于调试）")]
         [SerializeField] private bool showRotateControlsOnDesktop;
 
+        [Header("旋转手势（移动端）")]
+        [Tooltip("第二根手指滑动多少像素触发一次 90° 旋转；1080 高下 60px 约 1/18 屏")]
+        [SerializeField] private float gestureStepPixels = 60f;
+
         [Header("缩放")]
         [SerializeField] private float basketScale = 0.6f;
         [SerializeField] private float dragScale = 1f;
@@ -58,6 +62,12 @@ namespace MendingtheSky
         private bool isDragging;
         private Vector3 dragOffset;
         private Camera cam;
+        /// <summary>拖拽那根手指的 fingerId（桌面端为 -1），手势要排除它。</summary>
+        private int dragFingerId = -1;
+        /// <summary>正在执行旋转手势的第二根手指，-1 表示没有。</summary>
+        private int gestureFingerId = -1;
+        /// <summary>手势基准的屏幕 y；每触发一次旋转就重置到当前位置。</summary>
+        private float gestureLastY;
 
         public bool IsDragging() { return isDragging; }
 
@@ -109,6 +119,7 @@ namespace MendingtheSky
                     OnMouseUp(Input.mousePosition);
                 }
                 HandleRotateInput();
+                HandleRotateGesture();
             }
         }
 
@@ -145,6 +156,9 @@ namespace MendingtheSky
         {
             draggingLingShi = ls;
             isDragging = true;
+            // 记录拖拽那根手指：双指手势必须把它排除在外（桌面端为 -1）
+            dragFingerId = Input.touchCount > 0 ? Input.GetTouch(0).fingerId : -1;
+            gestureFingerId = -1;
             dragOffset = ls.transform.position - mouseWorld;
             // 用 Kinematic 而不是 simulated=false：后者会让 Collider 退出物理查询，
             // 导致已放置/暂存的灵石之后无法再被拾取
@@ -236,6 +250,8 @@ namespace MendingtheSky
         {
             isDragging = false;
             draggingLingShi = null;
+            dragFingerId = -1;
+            gestureFingerId = -1;
             ClearPreview();
             HideRotateControls();
         }
@@ -386,17 +402,76 @@ namespace MendingtheSky
             }
             draggingLingShi = null;
             isDragging = false;
+            dragFingerId = -1;
+            gestureFingerId = -1;
             stashedLingShi.Clear();
             ClearPreview();
             HideRotateControls();
         }
 
         /// <summary>
-        /// 是否允许显示旋转按钮：默认只在移动端出现，PC 上靠 showRotateControlsOnDesktop 打开便于调试。
+        /// 移动端双指旋转手势：第一根手指拖石头，第二根手指上滑逆时针 / 下滑顺时针。
+        /// 每滑 gestureStepPixels 触发一次 90°，触发后把基准点重置为当前位置，可以连续转。
+        /// 桌面端 touchCount 恒为 0，此方法直接返回，不影响键鼠操作。
+        /// </summary>
+        private void HandleRotateGesture()
+        {
+            if (!GameSettings.RotateGestureEnabled || draggingLingShi == null || !draggingLingShi.CanRotate())
+            {
+                gestureFingerId = -1;
+                return;
+            }
+            // 必须有两根手指：一根按住拖拽，另一根做手势
+            if (Input.touchCount < 2)
+            {
+                gestureFingerId = -1;
+                return;
+            }
+
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                Touch touch = Input.GetTouch(i);
+                if (touch.fingerId == dragFingerId)
+                {
+                    continue;
+                }
+
+                if (touch.fingerId != gestureFingerId)
+                {
+                    // 换了一根手指：只记基准，等它真的滑动再触发，避免一按下就转
+                    gestureFingerId = touch.fingerId;
+                    gestureLastY = touch.position.y;
+                    return;
+                }
+
+                float delta = touch.position.y - gestureLastY;
+                if (Mathf.Abs(delta) >= Mathf.Max(1f, gestureStepPixels))
+                {
+                    RotateDragging(IsClockwiseGesture(delta));
+                    gestureLastY = touch.position.y;
+                }
+                return;
+            }
+        }
+
+        /// <summary>
+        /// 手势方向判定：屏幕坐标 y 向上为正，所以上滑（deltaY &gt; 0）是逆时针、下滑是顺时针。
+        /// 抽成静态方法便于单测，防止符号写反（写反的话上下滑会完全颠倒）。
+        /// </summary>
+        public static bool IsClockwiseGesture(float deltaY)
+        {
+            return deltaY < 0f;
+        }
+
+        /// <summary>
+        /// 是否允许显示旋转按钮：设置里选「手势」时不显示；默认只在移动端出现，
+        /// PC 上靠 showRotateControlsOnDesktop 打开便于调试。
         /// </summary>
         private bool ShouldShowRotateControls()
         {
-            return rotateControls != null && (Application.isMobilePlatform || showRotateControlsOnDesktop);
+            return rotateControls != null
+                   && GameSettings.RotateButtonsEnabled
+                   && (Application.isMobilePlatform || showRotateControlsOnDesktop);
         }
 
         /// <summary>按当前拖拽状态刷新旋转按钮显隐（只有拖着一块已煮灵石时才出现）。</summary>
