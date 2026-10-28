@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace MendingtheSky
 {
     /// <summary>
-    /// 拖拽控制器（阶段 3）：拾取 → 拖动（滚轮/R 旋转）→ 放置/回背篓/暂存。
+    /// 拖拽控制器（阶段 3）：拾取 → 拖动（A/D 或滚轮旋转）→ 放置/回背篓/暂存。
     /// 拾取方案 A：只检测灵石碰撞体（Physics2D.OverlapPointAll），取排序最上层。
     ///
     /// 放置判定与预览颜色（2026-10-24 用户确认）：
@@ -37,7 +37,10 @@ namespace MendingtheSky
         [SerializeField] private Collider2D basketAreaCollider;
 
         [Header("输入")]
-        [SerializeField] private KeyCode rotateKey = KeyCode.R;
+        [Tooltip("顺时针旋转键（默认 D，右手在鼠标上时左手不用移位）")]
+        [SerializeField] private KeyCode rotateClockwiseKey = KeyCode.D;
+        [Tooltip("逆时针旋转键（默认 A）")]
+        [SerializeField] private KeyCode rotateCounterClockwiseKey = KeyCode.A;
         [SerializeField] private bool useMouseScroll = true;
 
         [Header("旋转按钮（移动端）")]
@@ -274,7 +277,7 @@ namespace MendingtheSky
         }
 
         /// <summary>
-        /// 拖拽中的旋转输入：R 顺时针、Shift+R 逆时针。
+        /// 拖拽中的旋转输入：A 逆时针、D 顺时针（左右方向直觉，儿童玩家不用记哪个是顺）。
         /// 滚轮不区分方向，任意滚动都算顺时针——滚轮分方向后「上滚」在键盘与滚轮两条路径里
         /// 会给出相反结果，反而更容易误操作（2026-10-28 用户确认）。
         /// </summary>
@@ -284,20 +287,8 @@ namespace MendingtheSky
             {
                 return;
             }
-            bool clockwise = false;
-            bool counterClockwise = false;
-            if (Input.GetKeyDown(rotateKey))
-            {
-                bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-                if (shiftHeld)
-                {
-                    counterClockwise = true;
-                }
-                else
-                {
-                    clockwise = true;
-                }
-            }
+            bool clockwise = Input.GetKeyDown(rotateClockwiseKey);
+            bool counterClockwise = Input.GetKeyDown(rotateCounterClockwiseKey);
             if (useMouseScroll && Mathf.Abs(Input.mouseScrollDelta.y) > 0.01f)
             {
                 clockwise = true;
