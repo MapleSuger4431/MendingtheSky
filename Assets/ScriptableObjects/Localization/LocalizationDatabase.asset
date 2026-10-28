@@ -67,7 +67,7 @@ MonoBehaviour:
     - key: ui.next_level
       value: "\u4E0B\u4E00\u5173"
     - key: ui.main_menu
-      value: "\u4E3B\u754C\u9762"
+      value: "\u5F00\u59CB\u83DC\u5355"
     - key: settings.title
       value: "\u8BBE\u7F6E"
     - key: settings.music
@@ -139,7 +139,7 @@ MonoBehaviour:
     - key: ui.next_level
       value: "\u4E0B\u4E00\u95DC"
     - key: ui.main_menu
-      value: "\u4E3B\u4ECB\u9762"
+      value: "\u958B\u59CB\u9078\u55AE"
     - key: settings.title
       value: "\u8A2D\u5B9A"
     - key: settings.music
@@ -211,7 +211,7 @@ MonoBehaviour:
     - key: ui.next_level
       value: NEXT LEVEL
     - key: ui.main_menu
-      value: MAIN MENU
+      value: Main Menu
     - key: settings.title
       value: SETTINGS
     - key: settings.music
