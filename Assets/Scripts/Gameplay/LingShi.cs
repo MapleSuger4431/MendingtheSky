@@ -311,8 +311,9 @@ namespace MendingtheSky
                 // 蒙尘遮罩：只有未煮 / 熬煮中才需要，熬煮时按进度渐隐
                 if (dustOverlaySprite != null && dustAlpha > 0.001f)
                 {
+                    // 纯视觉层：必须禁用碰撞体，否则每格多出一个 Collider 会让灵石质量翻倍、拖拽手感发死
                     CreateBlock(dustOverlaySprite, localPos, blockOverlap, sortingBase + 2,
-                        new Color(1f, 1f, 1f, dustAlpha), false);
+                        new Color(1f, 1f, 1f, dustAlpha), true);
                     GameObject dustBlock = blockInstances.Count > 0 ? blockInstances[blockInstances.Count - 1] : null;
                     SpriteRenderer dustSr = dustBlock != null ? dustBlock.GetComponentInChildren<SpriteRenderer>() : null;
                     if (dustSr != null)
