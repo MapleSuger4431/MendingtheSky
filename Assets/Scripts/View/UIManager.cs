@@ -137,7 +137,6 @@ namespace MendingtheSky
         private Coroutine hintRoutine;
 
         // 语言切换后需要重算的带参数文本的缓存值
-        private int lastLevelId = 1;
         private bool lastIsEndless;
         [Tooltip("无尽模式当前难度倍率（HUD 显示用）")]
         private float lastDifficultyMultiplier = 1f;
@@ -216,9 +215,9 @@ namespace MendingtheSky
             HideLevelSelect();
             HidePause();
             HideResult();
-            lastLevelId = levelConfig.GetLevelId();
             lastIsEndless = levelConfig.IsEndless();
             lastFilledHoles = 0;
+            lastTotalHoles = levelConfig.GetTotalHoles();
             lastDifficultyMultiplier = 1f;
             if (levelNameText != null)
             {
@@ -584,12 +583,16 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>无尽模式：每补好一个洞刷新 HUD 上的「已补 N 洞 · 难度 ×X」。</summary>
-        public void UpdateEndlessProgress(int filledHoles, float difficultyMultiplier = 1f)
+        /// <summary>
+        /// 每补好一个洞刷新 HUD 进度文本：普通关「已补 3 / 10」，无尽模式「无尽模式 · 已补 N 洞 · 难度 ×X」。
+        /// 普通关也走这里，才能让右侧进度随补洞实时递增。
+        /// </summary>
+        public void UpdateHoleProgress(int filledHoles, int totalHoles, float difficultyMultiplier = 1f)
         {
             lastFilledHoles = filledHoles;
+            lastTotalHoles = totalHoles;
             lastDifficultyMultiplier = difficultyMultiplier;
-            if (lastIsEndless && levelNameText != null)
+            if (levelNameText != null)
             {
                 levelNameText.text = FormatLevelName();
             }
@@ -905,12 +908,15 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>HUD 关卡名：普通关卡「第 N 关」，无尽模式「无尽模式 · 已补 N 洞 · 难度 ×X」。</summary>
+        /// <summary>
+        /// HUD 进度文本：普通关卡「已补 3 / 10」，无尽模式「无尽模式 · 已补 N 洞 · 难度 ×X」。
+        /// 普通关不再显示关卡名——节气候名只出现在选关日历与结算面板。
+        /// </summary>
         private string FormatLevelName()
         {
             if (!lastIsEndless)
             {
-                return L10n.Get("hud.level", lastLevelId);
+                return L10n.Get("hud.holes_progress", lastFilledHoles, lastTotalHoles);
             }
             string progress = L10n.Get("hud.endless_progress", lastFilledHoles);
             // 难度倍率只在真的变难后才显示，第一洞之前不占地方

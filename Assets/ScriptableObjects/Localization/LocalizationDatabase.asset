@@ -48,6 +48,8 @@ MonoBehaviour:
       value: English
     - key: hud.level
       value: "\u7B2C {0} \u5173"
+    - key: hud.holes_progress
+      value: "\u5DF2\u8865 {0} / {1}"
     - key: hud.endless
       value: "\u65E0\u5C3D\u6A21\u5F0F"
     - key: hud.endless_progress
@@ -136,6 +138,8 @@ MonoBehaviour:
       value: English
     - key: hud.level
       value: "\u7B2C {0} \u95DC"
+    - key: hud.holes_progress
+      value: "\u5DF2\u88DC {0} / {1}"
     - key: hud.endless
       value: "\u7121\u76E1\u6A21\u5F0F"
     - key: hud.endless_progress
@@ -224,6 +228,8 @@ MonoBehaviour:
       value: English
     - key: hud.level
       value: LV {0}
+    - key: hud.holes_progress
+      value: '{0} / {1}'
     - key: hud.endless
       value: ENDLESS
     - key: hud.endless_progress

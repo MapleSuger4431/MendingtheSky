@@ -300,9 +300,14 @@ namespace MendingtheSky
                 ApplyEndlessDifficulty();
                 if (uiManager != null)
                 {
-                    // HUD 上实时显示「已补 N 洞 · 难度 ×X」
-                    uiManager.UpdateEndlessProgress(filledHoleCount, qiManager.GetDifficultyMultiplier());
+                    // HUD 上实时显示「无尽模式 · 已补 N 洞 · 难度 ×X」（无尽没有分母，总数传 0）
+                    uiManager.UpdateHoleProgress(filledHoleCount, 0, qiManager.GetDifficultyMultiplier());
                 }
+            }
+            else if (uiManager != null && levelConfig != null)
+            {
+                // 普通关：HUD 右侧进度「已补 3 / 10」，随补洞实时递增
+                uiManager.UpdateHoleProgress(filledHoleCount, levelConfig.GetTotalHoles());
             }
             CheckWinCondition();
         }
