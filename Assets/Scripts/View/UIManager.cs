@@ -68,11 +68,9 @@ namespace MendingtheSky
         [Tooltip("预览开关的图形（ui_toggle）：水平翻转表示开/关（美术把滑块画在左端）")]
         [SerializeField] private RectTransform previewToggleVisual;
 
-        [Header("语言切换（暂停面板）")]
-        [Tooltip("循环切换 简体 → 繁體 → English 的按钮")]
-        [SerializeField] private Button languageButton;
-        [Tooltip("显示当前语言的文本，如「语言：简体中文」")]
-        [SerializeField] private TextMeshProUGUI languageButtonText;
+        [Header("暂停面板")]
+        [Tooltip("打开设置面板（语言切换已并入设置面板）")]
+        [SerializeField] private Button pauseSettingsButton;
 
         [Header("主界面")]
         [SerializeField] private GameObject menuPanel;
@@ -439,10 +437,35 @@ namespace MendingtheSky
 
         // ---------------- 设置面板 ----------------
 
-        /// <summary>打开设置面板（从主界面进入）。</summary>
+        /// <summary>设置面板的返回目标：true = 回暂停面板，false = 回主界面。</summary>
+        private bool settingsReturnToPause;
+
+        /// <summary>打开设置面板（从主界面进入），返回时回主界面。</summary>
         public void ShowSettings()
         {
-            HideMenu();
+            ShowSettings(false);
+        }
+
+        /// <summary>
+        /// 从暂停面板打开设置：先收起暂停面板，返回时回到暂停面板而不是主界面
+        /// （否则玩家按一次返回就会丢掉当前局）。
+        /// </summary>
+        public void ShowSettingsFromPause()
+        {
+            ShowSettings(true);
+        }
+
+        private void ShowSettings(bool returnToPause)
+        {
+            settingsReturnToPause = returnToPause;
+            if (returnToPause)
+            {
+                HidePause();
+            }
+            else
+            {
+                HideMenu();
+            }
             if (settingsPanel != null)
             {
                 settingsPanel.SetActive(true);
@@ -695,7 +718,7 @@ namespace MendingtheSky
             AddClickSound(resumeButton, restartButton, backToIdleButton);
             AddClickSound(loseRetryButton, loseMenuButton);
             AddClickSound(winRetryButton, winMenuButton);
-            AddClickSound(previewToggleButton, languageButton);
+            AddClickSound(previewToggleButton, pauseSettingsButton);
             AddClickSound(musicMuteButton, sfxMuteButton);
             AddClickSound(settingsBackButton, settingsLanguageButton, settingsKeybindButton, settingsRotateButton);
 
@@ -723,7 +746,15 @@ namespace MendingtheSky
                 settingsBackButton.onClick.AddListener(() =>
                 {
                     HideSettings();
-                    ShowMenu();
+                    // 从哪来回哪去：暂停进来就回暂停，否则回主界面
+                    if (settingsReturnToPause)
+                    {
+                        ShowPause();
+                    }
+                    else
+                    {
+                        ShowMenu();
+                    }
                 });
             }
             if (settingsLanguageButton != null)
@@ -844,10 +875,10 @@ namespace MendingtheSky
                     RefreshSettingsLabels();
                 });
             }
-            if (languageButton != null)
+            if (pauseSettingsButton != null)
             {
-                // 循环 简体 → 繁體 → English，切换事件会触发 RefreshLocalizedTexts
-                languageButton.onClick.AddListener(() => L10n.CycleLanguage());
+                // 语言切换已并入设置面板；从暂停进入时返回要回暂停，不能踢回主界面
+                pauseSettingsButton.onClick.AddListener(ShowSettingsFromPause);
             }
         }
 
@@ -931,11 +962,6 @@ namespace MendingtheSky
             {
                 winRetryButtonText.text = L10n.Get(
                     gameManager != null && gameManager.HasNextLevel() ? "ui.next_level" : "ui.play_again");
-            }
-            if (languageButtonText != null)
-            {
-                languageButtonText.text = L10n.Get("ui.language",
-                    L10n.GetLanguageDisplayName(L10n.GetCurrentLanguage()));
             }
         }
 
