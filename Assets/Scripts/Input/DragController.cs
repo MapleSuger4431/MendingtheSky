@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace MendingtheSky
 {
@@ -39,6 +40,14 @@ namespace MendingtheSky
         [SerializeField] private KeyCode rotateKey = KeyCode.R;
         [SerializeField] private bool useMouseScroll = true;
 
+        [Header("旋转按钮（移动端）")]
+        [Tooltip("拖拽可旋转灵石时显示的按钮组（顺时针 / 逆时针）；为空则永不显示")]
+        [SerializeField] private GameObject rotateControls;
+        [SerializeField] private Button rotateClockwiseButton;
+        [SerializeField] private Button rotateCounterClockwiseButton;
+        [Tooltip("PC / 编辑器上也显示旋转按钮（默认只在移动端显示，这里打开便于调试）")]
+        [SerializeField] private bool showRotateControlsOnDesktop;
+
         [Header("缩放")]
         [SerializeField] private float basketScale = 0.6f;
         [SerializeField] private float dragScale = 1f;
@@ -58,6 +67,16 @@ namespace MendingtheSky
         private void Awake()
         {
             cam = Camera.main;
+            // 移动端旋转按钮：点击走与键盘同一条 RotateDragging 路径，保证预览/校验一致
+            if (rotateClockwiseButton != null)
+            {
+                rotateClockwiseButton.onClick.AddListener(() => RotateDragging(true));
+            }
+            if (rotateCounterClockwiseButton != null)
+            {
+                rotateCounterClockwiseButton.onClick.AddListener(() => RotateDragging(false));
+            }
+            HideRotateControls();
         }
 
         private void Update()
@@ -66,6 +85,8 @@ namespace MendingtheSky
             //（暂停 / 胜利 / 失败 / 未开始时不响应，避免暂停期间还能拖灵石）
             if (gameManager != null && !gameManager.IsPlaying())
             {
+                // 暂停 / 结算时按钮也要收起来，否则会浮在面板上还能点
+                HideRotateControls();
                 return;
             }
             if (Input.GetMouseButtonDown(1))
@@ -132,6 +153,7 @@ namespace MendingtheSky
             ls.SetTransparent(false);
             ls.SetTargetScale(dragScale);
             UpdatePreview();
+            UpdateRotateControls();
         }
 
         public void OnMouseDrag(Vector2 screenPos)
@@ -215,6 +237,7 @@ namespace MendingtheSky
             isDragging = false;
             draggingLingShi = null;
             ClearPreview();
+            HideRotateControls();
         }
 
         private IEnumerator SnapToCell(LingShi ls, Vector2Int anchor)
@@ -365,6 +388,39 @@ namespace MendingtheSky
             isDragging = false;
             stashedLingShi.Clear();
             ClearPreview();
+            HideRotateControls();
+        }
+
+        /// <summary>
+        /// 是否允许显示旋转按钮：默认只在移动端出现，PC 上靠 showRotateControlsOnDesktop 打开便于调试。
+        /// </summary>
+        private bool ShouldShowRotateControls()
+        {
+            return rotateControls != null && (Application.isMobilePlatform || showRotateControlsOnDesktop);
+        }
+
+        /// <summary>按当前拖拽状态刷新旋转按钮显隐（只有拖着一块已煮灵石时才出现）。</summary>
+        private void UpdateRotateControls()
+        {
+            if (rotateControls == null)
+            {
+                return;
+            }
+            bool show = ShouldShowRotateControls()
+                        && draggingLingShi != null
+                        && draggingLingShi.CanRotate();
+            if (rotateControls.activeSelf != show)
+            {
+                rotateControls.SetActive(show);
+            }
+        }
+
+        private void HideRotateControls()
+        {
+            if (rotateControls != null && rotateControls.activeSelf)
+            {
+                rotateControls.SetActive(false);
+            }
         }
 
         /// <summary>
