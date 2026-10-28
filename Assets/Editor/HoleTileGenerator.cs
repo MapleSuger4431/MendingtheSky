@@ -1,112 +1,279 @@
-using System.IO;
+﻿using System.IO;
 using UnityEditor;
 using UnityEngine;
 
 namespace MendingtheSky.EditorTools
 {
     /// <summary>
-    /// 按位掩码合成 16 张洞口瓦片（2026-10-28 方案）：
-    /// 底 = hole_body 无缝材质，暴露的四边贴一条淡青白柔光带，相邻两条暴露边的交角做圆角遮罩。
+    /// 纯程序生成 16 张洞口瓦片（2026-10-28 第三版）。
+    ///
+    /// 目标：天被撕开的口子。
+    /// - 洞体：近黑平涂 + 极淡噪点 + 少量暗红余烬点；
+    /// - 边缘：多倍频平滑噪声做撕裂起伏，崩裂点处猛地加宽，四条边各自独立避免镜像对称；
+    /// - 光带：1.2px 白芯 → 5px 紫层 → 6px 青白辉光（三次衰减，收紧不雾）；
+    /// - 角部：两条暴露边相交处切出缺口，并沿斜线补辉光，读作撕裂而不是贴图漏洞。
     ///
     /// 掩码：1=上邻 2=下邻 4=左邻 8=右邻（同属一个洞）。
-    /// 有邻居的一侧不画光带（洞内无缝），没邻居（暴露）的一侧才画。
-    ///
-    /// 用法：菜单 MendingtheSky/生成洞口瓦片，或调用 Generate()。
     /// </summary>
     public static class HoleTileGenerator
     {
-        private const string BodyPath = "Assets/Art/Hole/hole_body_texture.png";
         private const string OutDir = "Assets/Art/Hole";
+
+        // ---- 洞体 ----
         private const int TileSize = 128;
-        private const int BandWidth = 16;          // 光带在瓦片上的厚度（像素）
-        private const float CornerRadius = 22f;    // 暴露边交角圆角半径
+        private static readonly Color BodyColor = new Color(0.031f, 0.020f, 0.043f, 1f);
+        private const float BodyNoise = 0.012f;
+        private const float EmberChance = 0.0006f;
+        private const int Seed = 20261028;
+
+        // ---- 光带 ----
+        private const float CoreWidth = 1.2f;
+        private const float PurpleWidth = 5.0f;
+        private const float GlowWidth = 6.0f;
+        private static readonly Color CoreColor = Color.white;
+        private static readonly Color PurpleColor = new Color(0.78f, 0.52f, 0.98f, 1f);
+        private static readonly Color GlowColor = new Color(0.70f, 0.90f, 1f, 1f);
+
+        // ---- 撕裂感 ----
+        private const float JagAmplitude = 5f;
+        private const int BurstCount = 3;
+        private const float CornerCutSize = 26f;
 
         [MenuItem("MendingtheSky/生成洞口瓦片")]
         public static void Generate()
         {
-            Texture2D body = LoadReadableTexture(BodyPath);
-            if (body == null)
-            {
-                Debug.LogError($"[HoleTile] 找不到洞体材质：{BodyPath}");
-                return;
-            }
-
             for (int mask = 0; mask < 16; mask++)
             {
-                Color[] pixels = BakeTile(body, mask);
+                Color[] pixels = BakeTile(mask);
                 SaveTile(pixels, $"{OutDir}/hole_tile_{mask}.png");
             }
-
             AssetDatabase.Refresh();
-            Debug.Log($"[HoleTile] 已生成 16 张 {TileSize}×{TileSize} 瓦片到 {OutDir}");
+            Debug.Log("[HoleTile] 已生成 16 张洞口瓦片（v3：分边崩裂 + 紫层 + 锐利衰减）");
         }
 
-        /// <summary>把材质平铺到瓦片尺寸，并按掩码补光带与圆角。</summary>
-        private static Color[] BakeTile(Texture2D body, int mask)
+        private static float ValueNoise(float t, int seed)
         {
-            var result = new Color[TileSize * TileSize];
-            int bw = body.width, bh = body.height;
-            for (int y = 0; y < TileSize; y++)
+            int i = Mathf.FloorToInt(t);
+            float f = t - i;
+            float a = Hash(i, seed);
+            float b = Hash(i + 1, seed);
+            float u = f * f * (3f - 2f * f);
+            return Mathf.Lerp(a, b, u) * 2f - 1f;
+        }
+
+        private static float Hash(int x, int seed)
+        {
+            unchecked
             {
-                for (int x = 0; x < TileSize; x++)
+                int h = x * 374761393 + seed * 668265263;
+                h = (h ^ (h >> 13)) * 1274126177;
+                h ^= h >> 16;
+                return (h & 0x7fffffff) / (float)0x7fffffff;
+            }
+        }
+
+        private static float EdgeJitter(float along01, int seed, float[] burstPositions)
+        {
+            float t = along01 * TileSize;
+            float n = ValueNoise(t * 0.06f, seed) * JagAmplitude
+                      + ValueNoise(t * 0.17f, seed + 7) * JagAmplitude * 0.45f
+                      + ValueNoise(t * 0.42f, seed + 13) * JagAmplitude * 0.22f
+                      + ValueNoise(t * 1.10f, seed + 29) * JagAmplitude * 0.10f;
+
+            for (int i = 0; i < burstPositions.Length; i++)
+            {
+                float d = Mathf.Abs(along01 - burstPositions[i]);
+                if (d < 0.08f)
                 {
-                    // 采样洞体材质（UV 平铺）
-                    float u = (x + 0.5f) / TileSize * bw;
-                    float v = (y + 0.5f) / TileSize * bh;
-                    result[y * TileSize + x] = body.GetPixel((int)u % bw, (int)v % bh);
+                    n += Mathf.Pow(1f - d / 0.08f, 2f) * JagAmplitude * 2.2f;
                 }
             }
+            return n;
+        }
 
+        private static Color[] BakeTile(int mask)
+        {
             bool openUp = (mask & 1) == 0;
             bool openDown = (mask & 2) == 0;
             bool openLeft = (mask & 4) == 0;
             bool openRight = (mask & 8) == 0;
 
+            var rng = new System.Random(Seed + mask * 977);
+            var pixels = new Color[TileSize * TileSize];
+            int seed = Seed + mask * 131;
+
+            float[] MakeBursts()
+            {
+                var arr = new float[BurstCount];
+                for (int i = 0; i < BurstCount; i++)
+                {
+                    arr[i] = 0.10f + 0.80f * (float)rng.NextDouble();
+                }
+                return arr;
+            }
+
+            float[] burstsUp = MakeBursts();
+            float[] burstsDown = MakeBursts();
+            float[] burstsLeft = MakeBursts();
+            float[] burstsRight = MakeBursts();
+
             for (int y = 0; y < TileSize; y++)
             {
                 for (int x = 0; x < TileSize; x++)
                 {
-                    // 到各暴露边的最小距离（只在暴露边生效）
+                    float noise = (float)rng.NextDouble();
+                    Color c = BodyColor;
+                    c.r += (noise - 0.5f) * BodyNoise;
+                    c.g += (noise - 0.5f) * BodyNoise;
+                    c.b += (noise - 0.5f) * BodyNoise;
+                    c.a = 1f;
+                    if ((float)rng.NextDouble() < EmberChance)
+                    {
+                        c = Color.Lerp(c, new Color(0.28f, 0.08f, 0.08f, 1f), 0.8f);
+                    }
+
                     float distance = float.MaxValue;
-                    if (openUp) distance = Mathf.Min(distance, TileSize - 1 - y);
-                    if (openDown) distance = Mathf.Min(distance, y);
-                    if (openLeft) distance = Mathf.Min(distance, x);
-                    if (openRight) distance = Mathf.Min(distance, TileSize - 1 - x);
-
-                    Color c = result[y * TileSize + x];
-
-                    if (distance < BandWidth)
+                    if (openUp)
                     {
-                        // 淡青白柔光：越靠边越亮，向内平方衰减
-                        float t = 1f - Mathf.Clamp01(distance / BandWidth);
-                        float glow = t * t;
-                        var edge = new Color(0.78f, 0.95f, 1f, 1f);
-                        c = Color.Lerp(c, edge, glow * 0.85f);
+                        float d = TileSize - 1 - y + EdgeJitter((float)x / TileSize, seed, burstsUp);
+                        if (d < distance) distance = d;
+                    }
+                    if (openDown)
+                    {
+                        float d = y + EdgeJitter((float)x / TileSize, seed + 3, burstsDown);
+                        if (d < distance) distance = d;
+                    }
+                    if (openLeft)
+                    {
+                        float d = x + EdgeJitter((float)y / TileSize, seed + 5, burstsLeft);
+                        if (d < distance) distance = d;
+                    }
+                    if (openRight)
+                    {
+                        float d = TileSize - 1 - x + EdgeJitter((float)y / TileSize, seed + 11, burstsRight);
+                        if (d < distance) distance = d;
                     }
 
-                    // 两条相邻暴露边的交角：裁成圆角（透明）
-                    if ((openUp && openLeft && x < CornerRadius && TileSize - 1 - y < CornerRadius) ||
-                        (openUp && openRight && TileSize - 1 - x < CornerRadius && TileSize - 1 - y < CornerRadius) ||
-                        (openDown && openLeft && x < CornerRadius && y < CornerRadius) ||
-                        (openDown && openRight && TileSize - 1 - x < CornerRadius && y < CornerRadius))
+                    if (distance == float.MaxValue)
                     {
-                        float cx = (openLeft ? CornerRadius : TileSize - 1 - CornerRadius);
-                        float cy = (openDown ? CornerRadius : TileSize - 1 - CornerRadius);
-                        float d = Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy));
-                        if (d > CornerRadius)
+                        pixels[y * TileSize + x] = c;
+                        continue;
+                    }
+
+                    if (distance < CoreWidth)
+                    {
+                        c = CoreColor;
+                    }
+                    else if (distance < PurpleWidth)
+                    {
+                        float t = (distance - CoreWidth) / Mathf.Max(0.01f, PurpleWidth - CoreWidth);
+                        c = Color.Lerp(CoreColor, PurpleColor, t);
+                    }
+                    else if (distance < GlowWidth)
+                    {
+                        float t = (distance - PurpleWidth) / Mathf.Max(0.01f, GlowWidth - PurpleWidth);
+                        float glow = (1f - t) * (1f - t) * (1f - t);
+                        c = Color.Lerp(c, GlowColor, glow * 0.92f);
+                    }
+
+                    if ((openUp && openLeft && x < CornerCutSize && TileSize - 1 - y < CornerCutSize) ||
+                        (openUp && openRight && TileSize - 1 - x < CornerCutSize && TileSize - 1 - y < CornerCutSize) ||
+                        (openDown && openLeft && x < CornerCutSize && y < CornerCutSize) ||
+                        (openDown && openRight && TileSize - 1 - x < CornerCutSize && y < CornerCutSize))
+                    {
+                        float localX = openLeft ? x : TileSize - 1 - x;
+                        float localY = openDown ? y : TileSize - 1 - y;
+                        float cut = CornerCutSize + ValueNoise(localX * 0.2f, seed + 17) * 6f;
+                        float cheb = localX + localY;
+
+                        if (cheb < cut)
                         {
-                            c.a = 0f; // 圆角外裁掉
+                            c.a = 0f;
                         }
-                        else if (d > CornerRadius - 2f)
+                        else if (cheb < cut + GlowWidth)
                         {
-                            c.a *= Mathf.InverseLerp(CornerRadius, CornerRadius - 2f, d); // 一像素抗锯齿
+                            float t = (cheb - cut) / GlowWidth;
+                            float glow = (1f - t) * (1f - t);
+                            c = Color.Lerp(c, GlowColor, glow * 0.9f);
+                            if (cheb < cut + CoreWidth * 1.5f)
+                            {
+                                c = Color.Lerp(c, CoreColor, 0.85f);
+                            }
                         }
                     }
 
-                    result[y * TileSize + x] = c;
+                    pixels[y * TileSize + x] = c;
                 }
             }
-            return result;
+            ApplyInteriorCracks(pixels, rng);
+            return pixels;
+        }
+
+        /// <summary>
+        /// 洞内裂痕：从 AI 生成的裂纹光带里取裂纹线，以很低透明度叠在洞体内部，
+        /// 每格 1~2 条、随机旋转与偏移，让洞里「有东西在裂」而不是一片纯黑。
+        /// </summary>
+        private static void ApplyInteriorCracks(Color[] pixels, System.Random rng)
+        {
+            const string crackPath = "Assets/TJGenerators/History/Sprite_20261028_131336.png";
+            if (!File.Exists(crackPath))
+            {
+                return;
+            }
+            var crackTex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            if (!crackTex.LoadImage(File.ReadAllBytes(crackPath)))
+            {
+                Object.DestroyImmediate(crackTex);
+                return;
+            }
+
+            int count = 1 + rng.Next(2);
+            for (int i = 0; i < count; i++)
+            {
+                float scale = 0.55f + 0.35f * (float)rng.NextDouble();
+                // 角度限制在一个较窄的族里（约 ±25°），避免三格方向完全无关
+                float angle = 0.55f + 0.85f * (float)rng.NextDouble();
+                float cx = TileSize * (0.3f + 0.4f * (float)rng.NextDouble());
+                float cy = TileSize * (0.3f + 0.4f * (float)rng.NextDouble());
+                float cos = Mathf.Cos(angle);
+                float sin = Mathf.Sin(angle);
+
+                for (int y = 0; y < TileSize; y++)
+                {
+                    for (int x = 0; x < TileSize; x++)
+                    {
+                        int idx = y * TileSize + x;
+                        if (pixels[idx].a < 0.5f)
+                        {
+                            continue;
+                        }
+
+                        float dx = x - cx;
+                        float dy = y - cy;
+                        float lx = (dx * cos + dy * sin) / scale;
+                        float ly = (-dx * sin + dy * cos) / scale;
+                        float u = 0.5f + lx / TileSize;
+                        float v = 0.5f + ly / TileSize;
+                        if (u < 0f || u > 1f || v < 0f || v > 1f)
+                        {
+                            continue;
+                        }
+
+                        Color crack = crackTex.GetPixel(
+                            Mathf.Clamp((int)(u * crackTex.width), 0, crackTex.width - 1),
+                            Mathf.Clamp((int)(v * crackTex.height), 0, crackTex.height - 1));
+                        // 掐掉裂纹贴图里的高亮星芒（否则会读成星光/脏点），并压成偏紫的暗线
+                        float a = Mathf.Min(crack.a, 0.5f) * 0.25f;
+                        if (a <= 0.01f)
+                        {
+                            continue;
+                        }
+                        Color tint = Color.Lerp(new Color(0.58f, 0.50f, 0.74f, 1f), crack, 0.35f);
+                        pixels[idx] = Color.Lerp(pixels[idx], tint, a);
+                    }
+                }
+            }
+            Object.DestroyImmediate(crackTex);
         }
 
         private static void SaveTile(Color[] pixels, string path)
@@ -117,7 +284,6 @@ namespace MendingtheSky.EditorTools
             File.WriteAllBytes(path, tex.EncodeToPNG());
             Object.DestroyImmediate(tex);
 
-            // 导入为 Sprite（尺寸小、无边框）
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             var ti = (TextureImporter)AssetImporter.GetAtPath(path);
             if (ti != null)
@@ -134,16 +300,6 @@ namespace MendingtheSky.EditorTools
                 ti.textureCompression = TextureImporterCompression.Uncompressed;
                 ti.SaveAndReimport();
             }
-        }
-
-        private static Texture2D LoadReadableTexture(string path)
-        {
-            if (!File.Exists(path))
-            {
-                return null;
-            }
-            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-            return tex.LoadImage(File.ReadAllBytes(path)) ? tex : null;
         }
     }
 }

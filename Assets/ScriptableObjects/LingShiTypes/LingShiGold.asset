@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: LingShiGold
   m_EditorClassIdentifier: 
   typeId: gold
-  displayName: "\u91D1\u7075\u77F3"
+  displayName: LingShiGold
   cookTime: 8
   qiValue: 9
-  normalSprite: {fileID: 21300000, guid: 5a2ba38d54f17574a98d659c223b612e, type: 3}
-  dustSprite: {fileID: 21300000, guid: f381132c56f171643a483c7ac00d4b23, type: 3}
-  glowSprite: {fileID: 21300000, guid: f4932dfe3bf698e48937882f81e9e1a0, type: 3}
-  tintColor: {r: 1, g: 1, b: 1, a: 1}
+  normalSprite: {fileID: 21300000, guid: 4b8f2b0ee6b0bf445a73572573c2295e, type: 3}
+  dustSprite: {fileID: 21300000, guid: 4b8f2b0ee6b0bf445a73572573c2295e, type: 3}
+  glowSprite: {fileID: 21300000, guid: 4b8f2b0ee6b0bf445a73572573c2295e, type: 3}
+  tintColor: {r: 0.9, g: 0.75, b: 0.45, a: 1}
   dustEffectPrefab: {fileID: 0}
   glowEffectPrefab: {fileID: 0}

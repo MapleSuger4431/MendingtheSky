@@ -17,6 +17,12 @@ namespace MendingtheSky
         [SerializeField] private float blockOverlap = 1.03f;
         [Tooltip("共享外轮廓贴图：每格一块、稍大、垫底；多格拼合形成整块轮廓")]
         [SerializeField] private Sprite outlineSprite;
+        [Tooltip("毛石描边（未煮 / 熬煮中）：边缘粗糙、有碎石缺口")]
+        [SerializeField] private Sprite stoneOutlineSprite;
+        [Tooltip("灵石描边（已煮 / 已放置）：规整圆角")]
+        [SerializeField] private Sprite cookedOutlineSprite;
+        [Tooltip("蒙尘遮罩：叠在填充层之上，熬煮过程中按进度渐隐，煮好即关闭")]
+        [SerializeField] private Sprite dustOverlaySprite;
         [SerializeField] private float outlineOverlap = 1.32f;
 
         /// <summary>每块灵石独立的排序基准（轮廓=base，填充=base+1），由 InventoryManager 分配。</summary>
@@ -33,6 +39,8 @@ namespace MendingtheSky
         private float targetScale = 1f;
         private float cellSize = 1f;
         private readonly List<GameObject> blockInstances = new List<GameObject>();
+        /// <summary>蒙尘层的渲染器：熬煮时逐帧改 alpha，不用整块重建。</summary>
+        private readonly List<SpriteRenderer> dustRenderers = new List<SpriteRenderer>();
         private Rigidbody2D body;
 
         public void Init(LingShiTypeConfig cfg, LingShiShape shape, Vector3 originPos, float scale, float cellSize)
@@ -108,6 +116,21 @@ namespace MendingtheSky
                 return;
             }
             cookElapsed += dt;
+
+            // 蒙尘随熬煮进度渐隐（不重建网格，只改 alpha）
+            float dustAlpha = 1f - GetCookProgress();
+            for (int i = 0; i < dustRenderers.Count; i++)
+            {
+                SpriteRenderer sr = dustRenderers[i];
+                if (sr == null)
+                {
+                    continue;
+                }
+                Color c = sr.color;
+                c.a = dustAlpha;
+                sr.color = c;
+            }
+
             if (IsCooked())
             {
                 SetState(LingShiState.Cooked);
@@ -268,12 +291,49 @@ namespace MendingtheSky
                 blockContainer = transform;
             }
             Sprite fillSprite = GetStateSprite();
+            // 描边按状态切换：毛石（未煮/熬煮中）用粗糙描边，灵石（已煮/已放置）用规整描边
+            bool rough = state == LingShiState.InBasket || state == LingShiState.Cooking;
+            Sprite outline = rough
+                ? (stoneOutlineSprite != null ? stoneOutlineSprite : outlineSprite)
+                : (cookedOutlineSprite != null ? cookedOutlineSprite : outlineSprite);
+            // 填充色由种类配置统一给（五色石共用同一张底纹，只换 tint）
+            Color fillColor = typeConfig != null ? typeConfig.GetTintColor() : Color.white;
+            float dustAlpha = GetDustAlpha();
+            dustRenderers.Clear();
+
             foreach (Vector2Int cell in shape.GetCurrentCells())
             {
                 Vector3 localPos = new Vector3(cell.y * cellSize, -cell.x * cellSize, 0f);
                 // 先画轮廓（垫底），再画填充（在上），多格拼合后内部轮廓被填充盖住，只剩外缘一圈
-                CreateBlock(outlineSprite, localPos, outlineOverlap, sortingBase, Color.white, true);
-                CreateBlock(fillSprite, localPos, blockOverlap, sortingBase + 1, Color.white, false);
+                CreateBlock(outline, localPos, outlineOverlap, sortingBase, Color.white, true);
+                CreateBlock(fillSprite, localPos, blockOverlap, sortingBase + 1, fillColor, false);
+
+                // 蒙尘遮罩：只有未煮 / 熬煮中才需要，熬煮时按进度渐隐
+                if (dustOverlaySprite != null && dustAlpha > 0.001f)
+                {
+                    CreateBlock(dustOverlaySprite, localPos, blockOverlap, sortingBase + 2,
+                        new Color(1f, 1f, 1f, dustAlpha), false);
+                    GameObject dustBlock = blockInstances.Count > 0 ? blockInstances[blockInstances.Count - 1] : null;
+                    SpriteRenderer dustSr = dustBlock != null ? dustBlock.GetComponentInChildren<SpriteRenderer>() : null;
+                    if (dustSr != null)
+                    {
+                        dustRenderers.Add(dustSr);
+                    }
+                }
+            }
+        }
+
+        /// <summary>蒙尘浓度：未煮满档、熬煮中按进度递减、煮好后关闭。</summary>
+        private float GetDustAlpha()
+        {
+            switch (state)
+            {
+                case LingShiState.InBasket:
+                    return 1f;
+                case LingShiState.Cooking:
+                    return 1f - GetCookProgress();
+                default:
+                    return 0f;
             }
         }
 

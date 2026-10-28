@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: LingShiBlue
   m_EditorClassIdentifier: 
   typeId: blue
-  displayName: "\u84DD\u7075\u77F3"
+  displayName: LingShiBlue
   cookTime: 5
   qiValue: 6
-  normalSprite: {fileID: 21300000, guid: 5686b156764452d4eabf25db46214500, type: 3}
-  dustSprite: {fileID: 21300000, guid: 093f11da55400af4d85545b8d84555e0, type: 3}
-  glowSprite: {fileID: 21300000, guid: 5ae1714a041ff1c4a838bd2c30c58583, type: 3}
-  tintColor: {r: 1, g: 1, b: 1, a: 1}
+  normalSprite: {fileID: 21300000, guid: 4b8f2b0ee6b0bf445a73572573c2295e, type: 3}
+  dustSprite: {fileID: 21300000, guid: 4b8f2b0ee6b0bf445a73572573c2295e, type: 3}
+  glowSprite: {fileID: 21300000, guid: 4b8f2b0ee6b0bf445a73572573c2295e, type: 3}
+  tintColor: {r: 0.49, g: 0.75, b: 0.72, a: 1}
   dustEffectPrefab: {fileID: 0}
   glowEffectPrefab: {fileID: 0}

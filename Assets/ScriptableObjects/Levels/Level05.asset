@@ -48,9 +48,13 @@ MonoBehaviour:
     intervalReducePerTier: 0
     minIntervalMultiplier: 0.6
   lingShiTypePool:
-  - typeConfig: {fileID: 11400000, guid: db5d1f67c4530cd4a8dcef3428e0beab, type: 2}
-    weight: 1
   - typeConfig: {fileID: 11400000, guid: bc624812b6634b649a74d79f50eb7180, type: 2}
-    weight: 1
+    weight: 22
+  - typeConfig: {fileID: 11400000, guid: db5d1f67c4530cd4a8dcef3428e0beab, type: 2}
+    weight: 22
   - typeConfig: {fileID: 11400000, guid: 21f3160bff928f04fb3cdd3bd49c7e8f, type: 2}
-    weight: 1
+    weight: 24
+  - typeConfig: {fileID: 11400000, guid: 7f28cefd0e0db3f44b5fdb312c02e5c3, type: 2}
+    weight: 20
+  - typeConfig: {fileID: 11400000, guid: 4aca1d2d3a91fbe4ea5eb0ec30577611, type: 2}
+    weight: 12
