@@ -45,6 +45,8 @@ namespace MendingtheSky
         [SerializeField] private int holeCellBonus;
         [Tooltip("无尽模式难度：补洞间隔倍率（1 = 关卡原始间隔）")]
         [SerializeField] private float holeIntervalMultiplier = 1f;
+        [Tooltip("顶部留给 HUD 的网格行数：洞不会在这些行生成（0 = 允许顶到屏幕顶部）")]
+        [SerializeField] private int reservedTopRows = 1;
 
         [Header("阶段 5 接线（可为空；为空时逻辑照常运行，便于 EditMode 测试）")]
         [SerializeField] private GridVisual gridVisual;
@@ -141,7 +143,7 @@ namespace MendingtheSky
             for (int attempt = 0; attempt < maxSpawnAttempts; attempt++)
             {
                 bool allowTouchUnfilled = random.NextDouble() < levelConfig.GetMergeChance();
-                int seedR = random.Next(0, rows);
+                int seedR = random.Next(Mathf.Clamp(reservedTopRows, 0, Mathf.Max(0, rows - 1)), rows);
                 int seedC = random.Next(0, cols);
                 if (!CanSpread(seedR, seedC, allowTouchUnfilled))
                 {
@@ -224,7 +226,9 @@ namespace MendingtheSky
             holes.Clear();
             cellToHole.Clear();
             var cells = new List<Vector2Int>(rows * cols);
-            for (int r = 0; r < rows; r++)
+            // 顶部保留行留给 HUD（灵气条/暂停按钮），调试全洞也不越过
+            int firstRow = Mathf.Clamp(reservedTopRows, 0, Mathf.Max(0, rows - 1));
+            for (int r = firstRow; r < rows; r++)
             {
                 for (int c = 0; c < cols; c++)
                 {
@@ -300,6 +304,11 @@ namespace MendingtheSky
         {
             int r = from.x + dr;
             int c = from.y + dc;
+            // 顶部保留行：洞口不允许蔓延进 HUD 覆盖的区域
+            if (r < reservedTopRows)
+            {
+                return;
+            }
             // 包围盒上限：加入后行/列跨度不得超过 maxHoleRows / maxHoleCols
             if (Mathf.Max(maxR, r) - Mathf.Min(minR, r) + 1 > levelConfig.GetMaxHoleRows())
             {

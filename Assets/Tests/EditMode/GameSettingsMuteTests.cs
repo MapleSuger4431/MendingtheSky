@@ -39,12 +39,16 @@ namespace MendingtheSky.Tests
         [Test]
         public void MutingMusic_KeepsVolumeButSilencesOutput()
         {
+            // 先把两路都设成已知值，避免受 PlayerPrefs 残留影响（这条以前会因环境不同而偶发失败）
             GameSettings.MusicVolume = 0.8f;
+            GameSettings.SfxVolume = 0.6f;
+            GameSettings.SfxMuted = false;
             GameSettings.MusicMuted = true;
 
             Assert.AreEqual(0.8f, GameSettings.MusicVolume, 0.0001f, "静音不应改动玩家设定的音量");
             Assert.AreEqual(0f, GameSettings.EffectiveMusicVolume, 0.0001f, "静音时实际输出应为 0");
-            Assert.AreEqual(0.8f, GameSettings.SfxVolume, 0.0001f, "音乐静音不应影响音效音量");
+            Assert.AreEqual(0.6f, GameSettings.SfxVolume, 0.0001f, "音乐静音不应影响音效音量");
+            Assert.AreEqual(0.6f, GameSettings.EffectiveSfxVolume, 0.0001f, "音效未静音时应保持原音量");
         }
 
         [Test]
