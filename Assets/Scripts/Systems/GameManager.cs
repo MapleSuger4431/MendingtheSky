@@ -31,6 +31,14 @@ namespace MendingtheSky
         [SerializeField] private DragController dragController;
         [SerializeField] private UIManager uiManager;
 
+        [Header("开始界面要隐藏的场景物件（进入关卡后再显示）")]
+        [Tooltip("背篓区域根物体")]
+        [SerializeField] private GameObject basketArea;
+        [Tooltip("锅区域根物体")]
+        [SerializeField] private GameObject potArea;
+        [Tooltip("灵石根物体（回主界面时旧石头还在，不藏会悬在空中）")]
+        [SerializeField] private GameObject lingShiRoot;
+
         [Header("本地化")]
         [Tooltip("简中 / 繁中 / 英文三张表；为空时界面会直接显示 key")]
         [SerializeField] private LocalizationDatabase localizationDatabase;
@@ -136,6 +144,8 @@ namespace MendingtheSky
             levelConfig = config;
             Time.timeScale = 1f; // 从暂停/失败状态重开时恢复时间
             filledHoleCount = 0;
+            // 进入关卡：把背篓/锅/灵石显示出来（主界面是隐藏的）
+            SetPlaygroundVisible(true);
             // 重开局先掐掉上一局残留的循环音（告急心跳 / 熬煮咕嘟）
             AudioManager.Instance?.StopWarningLoop();
             AudioManager.Instance?.StopCookLoop();
@@ -250,9 +260,22 @@ namespace MendingtheSky
             {
                 inventoryManager.InvalidatePendingSpawns();
             }
+            // 主界面不显示背篓/锅/灵石
+            SetPlaygroundVisible(false);
             uiManager.HideAllPanels();
             uiManager.HideHUD();
             uiManager.ShowMenu();
+        }
+
+        /// <summary>
+        /// 开始界面与游戏内的场景物件切换：主界面隐藏背篓、锅与灵石，进入关卡后再显示。
+        /// 灵石要一起藏——回主界面时旧石头还没销毁，只藏背篓会看到石头悬在空中。
+        /// </summary>
+        private void SetPlaygroundVisible(bool visible)
+        {
+            if (basketArea != null) basketArea.SetActive(visible);
+            if (potArea != null) potArea.SetActive(visible);
+            if (lingShiRoot != null) lingShiRoot.SetActive(visible);
         }
 
         /// <summary>
