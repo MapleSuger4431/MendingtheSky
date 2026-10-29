@@ -54,3 +54,6 @@ crashlytics-build.properties
 /Assets/TJGenerators/
 # Codely 本地缓存（剪贴板截图等）
 /.codely/
+
+# build output
+/Build/
