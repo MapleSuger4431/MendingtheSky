@@ -79,6 +79,12 @@ namespace MendingtheSky
         [SerializeField] private Button menuLevelSelectButton;
         [Tooltip("主界面「设置」按钮：打开设置面板")]
         [SerializeField] private Button menuSettingsButton;
+        [Tooltip("退出游戏（移动端平台不允许程序自杀式退出，启动时自动隐藏）")]
+        [SerializeField] private Button menuQuitButton;
+        [Tooltip("退出游戏二次确认弹窗")]
+        [SerializeField] private GameObject quitConfirmPanel;
+        [SerializeField] private Button quitCancelButton;
+        [SerializeField] private Button quitConfirmButton;
 
         [Header("设置面板")]
         [SerializeField] private GameObject settingsPanel;
@@ -165,6 +171,12 @@ namespace MendingtheSky
             RefreshLocalizedTexts();
             HidePause();
             HideResult();
+            HideQuitConfirm();
+            // 移动端（iOS/Android）不允许程序主动退出，直接藏掉入口，避免点了没反应
+            if (menuQuitButton != null && Application.isMobilePlatform)
+            {
+                menuQuitButton.gameObject.SetActive(false);
+            }
         }
 
         private void OnDestroy()
@@ -268,6 +280,7 @@ namespace MendingtheSky
             HideSettings();
             HidePause();
             HideResult();
+            HideQuitConfirm();
             if (menuPanel != null)
             {
                 menuPanel.SetActive(true);
@@ -280,6 +293,36 @@ namespace MendingtheSky
             {
                 menuPanel.SetActive(false);
             }
+        }
+
+        /// <summary>打开退出确认弹窗（主界面「退出游戏」按钮）。</summary>
+        public void ShowQuitConfirm()
+        {
+            if (quitConfirmPanel != null)
+            {
+                quitConfirmPanel.SetActive(true);
+            }
+        }
+
+        public void HideQuitConfirm()
+        {
+            if (quitConfirmPanel != null)
+            {
+                quitConfirmPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// 确认退出：编辑器里停止 Play Mode（否则编辑器不会有反应）；
+        /// 打包后走 Application.Quit。移动端入口已隐藏，这里不会被调用。
+        /// </summary>
+        private void QuitGame()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         /// <summary>显示关卡选择：每次打开都按数据库重新生成按钮。</summary>
@@ -712,7 +755,8 @@ namespace MendingtheSky
         private void BindButtons()
         {
             // 统一先挂点击音，保证音效先于按钮动作播放
-            AddClickSound(menuStartButton, menuEndlessButton, menuLevelSelectButton, menuSettingsButton);
+            AddClickSound(menuStartButton, menuEndlessButton, menuLevelSelectButton, menuSettingsButton, menuQuitButton);
+            AddClickSound(quitCancelButton, quitConfirmButton);
             AddClickSound(levelSelectBackButton);
             AddClickSound(hudPauseButton);
             AddClickSound(resumeButton, restartButton, backToIdleButton);
@@ -738,6 +782,18 @@ namespace MendingtheSky
             if (menuSettingsButton != null)
             {
                 menuSettingsButton.onClick.AddListener(ShowSettings);
+            }
+            if (menuQuitButton != null)
+            {
+                menuQuitButton.onClick.AddListener(ShowQuitConfirm);
+            }
+            if (quitCancelButton != null)
+            {
+                quitCancelButton.onClick.AddListener(HideQuitConfirm);
+            }
+            if (quitConfirmButton != null)
+            {
+                quitConfirmButton.onClick.AddListener(QuitGame);
             }
 
             // 设置面板

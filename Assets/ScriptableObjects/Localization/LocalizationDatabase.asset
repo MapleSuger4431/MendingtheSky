@@ -70,6 +70,12 @@ MonoBehaviour:
       value: "\u4E0B\u4E00\u5173"
     - key: ui.main_menu
       value: "\u5F00\u59CB\u83DC\u5355"
+    - key: ui.cancel
+      value: "\u53D6\u6D88"
+    - key: ui.quit_confirm
+      value: "\u786E\u5B9A\u9000\u51FA\u6E38\u620F\u5417\uFF1F"
+    - key: ui.quit
+      value: "\u9000\u51FA\u6E38\u620F"
     - key: settings.title
       value: "\u8BBE\u7F6E"
     - key: settings.music
@@ -168,6 +174,12 @@ MonoBehaviour:
       value: "\u4E0B\u4E00\u95DC"
     - key: ui.main_menu
       value: "\u958B\u59CB\u9078\u55AE"
+    - key: ui.cancel
+      value: "\u53D6\u6D88"
+    - key: ui.quit_confirm
+      value: "\u78BA\u5B9A\u96E2\u958B\u904A\u6232\u55CE\uFF1F"
+    - key: ui.quit
+      value: "\u96E2\u958B\u904A\u6232"
     - key: settings.title
       value: "\u8A2D\u5B9A"
     - key: settings.music
@@ -266,6 +278,12 @@ MonoBehaviour:
       value: NEXT LEVEL
     - key: ui.main_menu
       value: Main Menu
+    - key: ui.cancel
+      value: Cancel
+    - key: ui.quit_confirm
+      value: Quit the game?
+    - key: ui.quit
+      value: Quit Game
     - key: settings.title
       value: SETTINGS
     - key: settings.music
