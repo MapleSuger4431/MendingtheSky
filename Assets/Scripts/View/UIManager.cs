@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -110,6 +111,10 @@ namespace MendingtheSky
         [Tooltip("键位等未开放功能的临时提示文本")]
         [SerializeField] private TextMeshProUGUI settingsHintText;
         [SerializeField] private Button settingsBackButton;
+        [Tooltip("重看新手引导：清除完成标记，下一关开始时会重新引导")]
+        [SerializeField] private Button settingsReplayTutorialButton;
+        [Tooltip("重看引导按钮上的文字（点击后临时显示「已重置」）")]
+        [SerializeField] private TextMeshProUGUI settingsReplayTutorialText;
 
         [Header("键位设置面板")]
         [SerializeField] private GameObject keybindPanel;
@@ -158,6 +163,8 @@ namespace MendingtheSky
         private bool isWarning;
         private float blinkTimer;
         private Coroutine hintRoutine;
+        /// <summary>「重看新手引导」按钮上临时提示的计时协程。</summary>
+        private Coroutine replayHintRoutine;
 
         // 语言切换后需要重算的带参数文本的缓存值
         private bool lastIsEndless;
@@ -454,6 +461,30 @@ namespace MendingtheSky
             {
                 keybindHintText.text = message;
             }
+        }
+
+        /// <summary>重看新手引导：清掉完成标记，下一关开局会重新播。</summary>
+        private void OnReplayTutorialClicked()
+        {
+            TutorialManager.ResetCompleted();
+            if (settingsReplayTutorialText == null)
+            {
+                return;
+            }
+            if (replayHintRoutine != null)
+            {
+                StopCoroutine(replayHintRoutine);
+            }
+            replayHintRoutine = StartCoroutine(ShowReplayHintRoutine());
+        }
+
+        private IEnumerator ShowReplayHintRoutine()
+        {
+            settingsReplayTutorialText.text = L10n.Get("settings.replay_done");
+            // 设置面板可能在暂停态打开（timeScale=0），这里必须用 realtime 计时
+            yield return new WaitForSecondsRealtime(1.6f);
+            settingsReplayTutorialText.text = L10n.Get("settings.replay_tutorial");
+            replayHintRoutine = null;
         }
 
         /// <summary>
@@ -910,6 +941,7 @@ namespace MendingtheSky
             AddClickSound(musicMuteButton, sfxMuteButton);
             AddClickSound(settingsBackButton, settingsLanguageButton, settingsKeybindButton, settingsRotateButton);
             AddClickSound(keybindRotateCwButton, keybindRotateCcwButton, keybindResetButton, keybindBackButton);
+            AddClickSound(settingsReplayTutorialButton);
 
             // 主界面
             if (menuStartButton != null)
@@ -996,6 +1028,10 @@ namespace MendingtheSky
                     HideKeybind();
                     ShowSettings();
                 });
+            }
+            if (settingsReplayTutorialButton != null)
+            {
+                settingsReplayTutorialButton.onClick.AddListener(OnReplayTutorialClicked);
             }
             if (musicSlider != null)
             {
