@@ -93,7 +93,7 @@ MonoBehaviour:
     - key: settings.rotate
       value: "\u65CB\u8F6C\u65B9\u5F0F"
     - key: settings.keybind
-      value: "\u952E\u4F4D\u8BBE\u7F6E\uFF08\u5F85\u5B9A\uFF09"
+      value: "\u952E\u4F4D\u8BBE\u7F6E"
     - key: settings.keybind_todo
       value: "\u952E\u4F4D\u4FEE\u6539\u7A0D\u540E\u5F00\u653E"
     - key: keybind.reset
@@ -221,7 +221,7 @@ MonoBehaviour:
     - key: settings.rotate
       value: "\u65CB\u8F49\u65B9\u5F0F"
     - key: settings.keybind
-      value: "\u6309\u9375\u8A2D\u5B9A\uFF08\u5F85\u5B9A\uFF09"
+      value: "\u6309\u9375\u8A2D\u5B9A"
     - key: settings.keybind_todo
       value: "\u6309\u9375\u4FEE\u6539\u7A0D\u5F8C\u958B\u653E"
     - key: keybind.reset
@@ -349,7 +349,7 @@ MonoBehaviour:
     - key: settings.rotate
       value: Rotation
     - key: settings.keybind
-      value: KEY BINDING (TBD)
+      value: KEY BINDING
     - key: settings.keybind_todo
       value: Key rebinding is coming later
     - key: keybind.reset
