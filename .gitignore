@@ -57,3 +57,7 @@ crashlytics-build.properties
 
 # build output
 /Build/
+
+# pending-deletion holding area (keep the README, ignore the payload)
+/ToDelete/*
+!/ToDelete/README.md
