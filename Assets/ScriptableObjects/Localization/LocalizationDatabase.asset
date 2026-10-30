@@ -96,6 +96,18 @@ MonoBehaviour:
       value: "\u952E\u4F4D\u8BBE\u7F6E\uFF08\u5F85\u5B9A\uFF09"
     - key: settings.keybind_todo
       value: "\u952E\u4F4D\u4FEE\u6539\u7A0D\u540E\u5F00\u653E"
+    - key: tutorial.skip
+      value: "\u8DF3\u8FC7"
+    - key: tutorial.celebrate
+      value: "\u8865\u597D\u4E00\u4E2A\u6D1E\uFF0C\u7075\u6C14\u4F1A\u56DE\u6765"
+    - key: tutorial.fill_hole
+      value: "\u628A\u6574\u4E2A\u7F3A\u53E3\u586B\u6EE1"
+    - key: tutorial.drag_to_grid
+      value: "\u628A\u716E\u597D\u7684\u77F3\u5934\u62D6\u5230\u5929\u7A7A\u7684\u7F3A\u53E3"
+    - key: tutorial.wait_cooking
+      value: "\u7B49\u5B83\u716E\u719F"
+    - key: tutorial.drag_to_pot
+      value: "\u628A\u77F3\u5934\u62D6\u8FDB\u9505\u91CC"
     - key: settings.mute
       value: "\u9759\u97F3"
     - key: settings.unmute
@@ -200,6 +212,18 @@ MonoBehaviour:
       value: "\u6309\u9375\u8A2D\u5B9A\uFF08\u5F85\u5B9A\uFF09"
     - key: settings.keybind_todo
       value: "\u6309\u9375\u4FEE\u6539\u7A0D\u5F8C\u958B\u653E"
+    - key: tutorial.skip
+      value: "\u8DF3\u904E"
+    - key: tutorial.celebrate
+      value: "\u88DC\u597D\u4E00\u500B\u6D1E\uFF0C\u9748\u6C23\u6703\u56DE\u4F86"
+    - key: tutorial.fill_hole
+      value: "\u628A\u6574\u500B\u7F3A\u53E3\u586B\u6EFF"
+    - key: tutorial.drag_to_grid
+      value: "\u628A\u716E\u597D\u7684\u77F3\u982D\u62D6\u5230\u5929\u7A7A\u7684\u7F3A\u53E3"
+    - key: tutorial.wait_cooking
+      value: "\u7B49\u5B83\u716E\u719F"
+    - key: tutorial.drag_to_pot
+      value: "\u628A\u77F3\u982D\u62D6\u9032\u934B\u88E1"
     - key: settings.mute
       value: "\u975C\u97F3"
     - key: settings.unmute
@@ -304,6 +328,18 @@ MonoBehaviour:
       value: KEY BINDING (TBD)
     - key: settings.keybind_todo
       value: Key rebinding is coming later
+    - key: tutorial.skip
+      value: Skip
+    - key: tutorial.celebrate
+      value: Rift mended - qi flows back
+    - key: tutorial.fill_hole
+      value: Fill the whole rift
+    - key: tutorial.drag_to_grid
+      value: Drag the cooked stone into a rift
+    - key: tutorial.wait_cooking
+      value: Wait for it to cook
+    - key: tutorial.drag_to_pot
+      value: Drag a stone into the pot
     - key: settings.mute
       value: Mute
     - key: settings.unmute

@@ -30,6 +30,8 @@ namespace MendingtheSky
         [SerializeField] private QiManager qiManager;
         [SerializeField] private DragController dragController;
         [SerializeField] private UIManager uiManager;
+        [Tooltip("新手引导（仅第一关首次游玩时启动）")]
+        [SerializeField] private TutorialManager tutorialManager;
 
         [Header("开始界面要隐藏的场景物件（进入关卡后再显示）")]
         [Tooltip("背篓区域根物体")]
@@ -176,6 +178,12 @@ namespace MendingtheSky
 
             // 7) 进入进行中
             SetState(GameState.Playing);
+
+            // 8) 新手引导：只有第一关首次游玩会真正启动，其余情况 TryBegin 内部直接返回
+            if (tutorialManager != null)
+            {
+                tutorialManager.TryBegin();
+            }
         }
 
         /// <summary>
