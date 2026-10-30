@@ -53,6 +53,10 @@ namespace MendingtheSky
         [Tooltip("第二根手指滑动多少像素触发一次 90° 旋转；1080 高下 60px 约 1/18 屏")]
         [SerializeField] private float gestureStepPixels = 60f;
 
+        [Header("触摸拖拽")]
+        [Tooltip("触摸拖拽时把手上的灵石抬到手指上方的像素距离（0 = 不抬）。鼠标拖拽不受影响")]
+        [SerializeField] private float dragLiftPixels = 80f;
+
         [Header("缩放")]
         [SerializeField] private float basketScale = 0.6f;
         [SerializeField] private float dragScale = 1f;
@@ -245,6 +249,12 @@ namespace MendingtheSky
             // 触摸时必须是真正按下石头的那根手指，不能假设是 GetTouch(0)。
             gestureFingerId = -1;
             dragOffset = ls.transform.position - mouseWorld;
+            // 触摸拖拽：按下瞬间就把石头抬到手指上方，别让手指盖住它（鼠标不抬）
+            Vector3 lift = ScreenLiftToWorld(CurrentDragLiftPixels());
+            if (lift != Vector3.zero)
+            {
+                ls.transform.position = mouseWorld + dragOffset + lift;
+            }
             // 用 Kinematic 而不是 simulated=false：后者会让 Collider 退出物理查询，
             // 导致已放置/暂存的灵石之后无法再被拾取
             ls.SetPhysicsBodyType(RigidbodyType2D.Kinematic);
@@ -262,8 +272,36 @@ namespace MendingtheSky
                 return;
             }
             Vector3 world = ScreenToWorld(screenPos);
-            draggingLingShi.transform.position = world + dragOffset;
+            draggingLingShi.transform.position = world + dragOffset + ScreenLiftToWorld(CurrentDragLiftPixels());
             UpdatePreview();
+        }
+
+        /// <summary>触摸拖拽才抬升；鼠标拖拽（dragFingerId = -1）返回 0，保持原来跟手的表现。</summary>
+        private float CurrentDragLiftPixels()
+        {
+            return dragFingerId >= 0 ? dragLiftPixels : 0f;
+        }
+
+        /// <summary>屏幕像素 → 世界单位的向上偏移（正交相机下与位置无关，可直接换算）。</summary>
+        private Vector3 ScreenLiftToWorld(float pixels)
+        {
+            if (pixels <= 0f)
+            {
+                return Vector3.zero;
+            }
+            Camera camera = cam != null ? cam : Camera.main;
+            if (camera == null)
+            {
+                return Vector3.zero;
+            }
+            Vector3 a = camera.WorldToScreenPoint(Vector3.zero);
+            Vector3 b = camera.WorldToScreenPoint(Vector3.right);
+            float pixelsPerUnit = Mathf.Abs(b.x - a.x);
+            if (pixelsPerUnit <= 0.0001f)
+            {
+                return Vector3.zero;
+            }
+            return Vector3.up * (pixels / pixelsPerUnit);
         }
 
         public void OnMouseUp(Vector2 screenPos)
