@@ -49,22 +49,22 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>只显示文案，不画高亮框。</summary>
-        public void ShowText(string key)
+        /// <summary>只显示文案，不画高亮框。text 必须是已本地化好的最终文本。</summary>
+        public void ShowText(string text)
         {
             gameObject.SetActive(true);
-            SetText(key);
+            SetText(text);
             if (highlight != null)
             {
                 highlight.gameObject.SetActive(false);
             }
         }
 
-        /// <summary>显示文案并把高亮框移到屏幕上的一块矩形区域。</summary>
-        public void ShowAt(string key, Vector2 screenCenter, Vector2 screenSize)
+        /// <summary>显示文案并把高亮框移到屏幕上的一块矩形区域。text 必须是已本地化好的最终文本。</summary>
+        public void ShowAt(string text, Vector2 screenCenter, Vector2 screenSize)
         {
             gameObject.SetActive(true);
-            SetText(key);
+            SetText(text);
             if (highlight == null || canvasRect == null)
             {
                 return;
@@ -92,7 +92,21 @@ namespace MendingtheSky
             gameObject.SetActive(false);
         }
 
-        private void SetText(string key)
+        /// <summary>改右上角按钮的文案：开场页显示「开始」，其余步骤显示「跳过」。</summary>
+        public void SetSkipLabel(string key)
+        {
+            if (skipButton == null)
+            {
+                return;
+            }
+            var localized = skipButton.GetComponentInChildren<MendingtheSky.LocalizedText>(true);
+            if (localized != null)
+            {
+                localized.Key = key;
+            }
+        }
+
+        private void SetText(string text)
         {
             if (bubbleRoot != null)
             {
@@ -100,7 +114,7 @@ namespace MendingtheSky
             }
             if (bubbleText != null)
             {
-                bubbleText.text = L10n.Get(key);
+                bubbleText.text = text;
             }
         }
     }

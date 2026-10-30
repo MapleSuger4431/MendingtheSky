@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ namespace MendingtheSky
         [SerializeField] private GameManager gameManager;
         [SerializeField] private PotManager potManager;
         [SerializeField] private GridManager gridManager;
+        [SerializeField] private QiManager qiManager;
         [SerializeField] private TutorialOverlay overlay;
         [Tooltip("锅区域的碰撞体：高亮框套在它外面")]
         [SerializeField] private Collider2D potHighlightCollider;
@@ -31,6 +33,11 @@ namespace MendingtheSky
         private float checkTimer;
         private float celebrateTimer;
         private int closedHolesAtStart;
+        /// <summary>灵气机制提示只弹一次。</summary>
+        private bool qiTipShown;
+        private Coroutine qiTipRoutine;
+        /// <summary>灵气降到这个比例以下时提示一次「归零就输」。</summary>
+        private const float QiTipThreshold = 0.7f;
 
         /// <summary>屏幕空间的矩形（中心 + 尺寸），供高亮框使用。</summary>
         private struct ScreenRect
@@ -88,7 +95,8 @@ namespace MendingtheSky
                 return;
             }
             closedHolesAtStart = gameManager.GetFilledHoleCount();
-            step = TutorialStep.DragToPot;
+            qiTipShown = false;
+            step = TutorialStep.Welcome;
             checkTimer = 0f;
             ShowCurrentStep();
         }
@@ -109,6 +117,14 @@ namespace MendingtheSky
             {
                 // 从暂停恢复：庆祝提示也需要重新显示
                 ShowCurrentStep();
+            }
+
+            // 灵气机制提示：整段引导只弹一次，弹的时候暂停步骤推进 4.5 秒
+            if (!qiTipShown && step != TutorialStep.Welcome && ShouldShowQiTip())
+            {
+                qiTipShown = true;
+                ShowQiTip();
+                return;
             }
 
             checkTimer += Time.deltaTime;
@@ -154,14 +170,53 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>玩家点了「跳过」：直接标记完成，不再打扰。</summary>
+        /// <summary>
+        /// 右上角按钮：开场页是「开始」（点了才进引导，不算跳过），其余步骤是「跳过」。
+        /// </summary>
         public void Skip()
         {
             if (!IsRunning())
             {
                 return;
             }
+            if (step == TutorialStep.Welcome)
+            {
+                Advance();
+                return;
+            }
             Finish();
+        }
+
+        private bool ShouldShowQiTip()
+        {
+            if (qiManager == null)
+            {
+                return false;
+            }
+            float max = qiManager.GetMaxQi();
+            return max > 0f && qiManager.GetCurrentQi() <= max * QiTipThreshold;
+        }
+
+        private void ShowQiTip()
+        {
+            if (overlay == null)
+            {
+                return;
+            }
+            if (qiTipRoutine != null)
+            {
+                StopCoroutine(qiTipRoutine);
+            }
+            qiTipRoutine = StartCoroutine(QiTipRoutine());
+        }
+
+        private IEnumerator QiTipRoutine()
+        {
+            overlay.ShowText(L10n.Get("tutorial.qi_tip"));
+            // 引导可能出现在暂停态（timeScale = 0），这里用 realtime
+            yield return new WaitForSecondsRealtime(4.5f);
+            qiTipRoutine = null;
+            ShowCurrentStep();
         }
 
         private void Advance()
@@ -202,20 +257,34 @@ namespace MendingtheSky
             }
             switch (step)
             {
+                case TutorialStep.Welcome:
+                    // 开场页按钮是「开始」：点它才真正进入引导
+                    overlay.SetSkipLabel("tutorial.welcome_start");
+                    overlay.ShowText(L10n.Get("tutorial.welcome_body"));
+                    break;
                 case TutorialStep.DragToPot:
-                    ShowAtWorld("tutorial.drag_to_pot", GetPotScreenRect());
+                    overlay.SetSkipLabel("tutorial.skip");
+                    ShowAtWorld(L10n.Get("tutorial.drag_to_pot"), GetPotScreenRect());
                     break;
                 case TutorialStep.WaitCooking:
-                    ShowAtWorld("tutorial.wait_cooking", GetPotScreenRect());
+                    overlay.SetSkipLabel("tutorial.skip");
+                    ShowAtWorld(L10n.Get("tutorial.wait_cooking"), GetPotScreenRect());
                     break;
                 case TutorialStep.DragToGrid:
-                    ShowAtWorld("tutorial.drag_to_grid", GetHoleScreenRect());
+                    overlay.SetSkipLabel("tutorial.skip");
+                    // 旋转操作按平台给不同说法：触屏端点按钮，桌面按 A / D
+                    string rotateHint = L10n.Get(Application.isMobilePlatform
+                        ? "tutorial.rotate_touch"
+                        : "tutorial.rotate_key");
+                    ShowAtWorld(L10n.Get("tutorial.drag_to_grid", rotateHint), GetHoleScreenRect());
                     break;
                 case TutorialStep.FillHole:
-                    ShowAtWorld("tutorial.fill_hole", GetHoleScreenRect());
+                    overlay.SetSkipLabel("tutorial.skip");
+                    ShowAtWorld(L10n.Get("tutorial.fill_hole"), GetHoleScreenRect());
                     break;
                 case TutorialStep.Celebrate:
-                    overlay.ShowText("tutorial.celebrate");
+                    overlay.SetSkipLabel("tutorial.skip");
+                    overlay.ShowText(L10n.Get("tutorial.celebrate"));
                     break;
                 default:
                     overlay.Hide();
@@ -223,7 +292,7 @@ namespace MendingtheSky
             }
         }
 
-        private void ShowAtWorld(string key, ScreenRect rect)
+        private void ShowAtWorld(string text, ScreenRect rect)
         {
             if (overlay == null)
             {
@@ -231,11 +300,11 @@ namespace MendingtheSky
             }
             if (rect.IsValid)
             {
-                overlay.ShowAt(key, rect.center, rect.size);
+                overlay.ShowAt(text, rect.center, rect.size);
             }
             else
             {
-                overlay.ShowText(key);
+                overlay.ShowText(text);
             }
         }
 

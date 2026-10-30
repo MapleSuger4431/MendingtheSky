@@ -115,15 +115,15 @@ MonoBehaviour:
     - key: tutorial.skip
       value: "\u8DF3\u8FC7"
     - key: tutorial.celebrate
-      value: "\u8865\u597D\u4E00\u4E2A\u6D1E\uFF0C\u7075\u6C14\u4F1A\u56DE\u6765"
+      value: "\u8865\u597D\u4E86\uFF01\n\u628A\u6240\u6709\u7834\u6D1E\u8865\u5B8C\u5C31\u8D62\u4E86"
     - key: tutorial.fill_hole
-      value: "\u628A\u6574\u4E2A\u7F3A\u53E3\u586B\u6EE1"
+      value: "\u628A\u6574\u4E2A\u7834\u6D1E\u586B\u6EE1\n\u7D2B\u8272\u7684\u7A7A\u683C\u90FD\u8981\u586B\u4E0A"
     - key: tutorial.drag_to_grid
-      value: "\u628A\u716E\u597D\u7684\u77F3\u5934\u62D6\u5230\u5929\u7A7A\u7684\u7F3A\u53E3"
+      value: "\u628A\u716E\u597D\u7684\u77F3\u5934\u62D6\u8FDB\u5929\u7A7A\u7684\u7834\u6D1E\n\u5F62\u72B6\u4E0D\u5408\u9002\uFF1F{0}"
     - key: tutorial.wait_cooking
-      value: "\u7B49\u5B83\u716E\u719F"
+      value: "\u7B49\u5B83\u716E\u719F\n\u9505\u91CC\u7684\u77F3\u5934\u4F1A\u6162\u6162\u53D8\u4EAE"
     - key: tutorial.drag_to_pot
-      value: "\u628A\u77F3\u5934\u62D6\u8FDB\u9505\u91CC"
+      value: "\u628A\u77F3\u5934\u62D6\u8FDB\u9505\u91CC\n\u624B\u6307\u6309\u4F4F\u77F3\u5934\uFF0C\u62D6\u5230\u9505\u4E0A\u9762\u677E\u624B"
     - key: settings.mute
       value: "\u9759\u97F3"
     - key: settings.unmute
@@ -150,6 +150,16 @@ MonoBehaviour:
       value: "\u4E0A\u4E00\u9875"
     - key: ui.next_page
       value: "\u4E0B\u4E00\u9875"
+    - key: tutorial.welcome_body
+      value: "\u628A\u5929\u7A7A\u7684\u7834\u6D1E\u5168\u90E8\u8865\u597D\n\u6309\u4F4F\u77F3\u5934\u62D6\u5230\u9505\u91CC\u716E\uFF0C\u716E\u597D\u540E\u62D6\u8FDB\u7834\u6D1E"
+    - key: tutorial.welcome_start
+      value: "\u5F00\u59CB"
+    - key: tutorial.rotate_touch
+      value: "\u70B9\u53F3\u4E0B\u89D2\u6309\u94AE\u8F6C\u52A8\u5B83"
+    - key: tutorial.rotate_key
+      value: "\u6309 A / D \u8F6C\u52A8\u5B83"
+    - key: tutorial.qi_tip
+      value: "\u7075\u6C14\u5728\u51CF\u5C11\n\u5F52\u96F6\u5C31\u8F93\u4E86\uFF0C\u8865\u597D\u7834\u6D1E\u80FD\u8D5A\u56DE\u6765"
   - language: 41
     entries:
     - key: ui.paused
@@ -251,15 +261,15 @@ MonoBehaviour:
     - key: tutorial.skip
       value: "\u8DF3\u904E"
     - key: tutorial.celebrate
-      value: "\u88DC\u597D\u4E00\u500B\u6D1E\uFF0C\u9748\u6C23\u6703\u56DE\u4F86"
+      value: "\u88DC\u597D\u4E86\uFF01\n\u628A\u6240\u6709\u7834\u6D1E\u88DC\u5B8C\u5C31\u8D0F\u4E86"
     - key: tutorial.fill_hole
-      value: "\u628A\u6574\u500B\u7F3A\u53E3\u586B\u6EFF"
+      value: "\u628A\u6574\u500B\u7834\u6D1E\u586B\u6EFF\n\u7D2B\u8272\u7684\u7A7A\u683C\u90FD\u8981\u586B\u4E0A"
     - key: tutorial.drag_to_grid
-      value: "\u628A\u716E\u597D\u7684\u77F3\u982D\u62D6\u5230\u5929\u7A7A\u7684\u7F3A\u53E3"
+      value: "\u628A\u716E\u597D\u7684\u77F3\u982D\u62D6\u9032\u5929\u7A7A\u7684\u7834\u6D1E\n\u5F62\u72C0\u4E0D\u5408\u9069\uFF1F{0}"
     - key: tutorial.wait_cooking
-      value: "\u7B49\u5B83\u716E\u719F"
+      value: "\u7B49\u5B83\u716E\u719F\n\u934B\u88E1\u7684\u77F3\u982D\u6703\u6162\u6162\u8B8A\u4EAE"
     - key: tutorial.drag_to_pot
-      value: "\u628A\u77F3\u982D\u62D6\u9032\u934B\u88E1"
+      value: "\u628A\u77F3\u982D\u62D6\u9032\u934B\u88E1\n\u624B\u6307\u6309\u4F4F\u77F3\u982D\uFF0C\u62D6\u5230\u934B\u4E0A\u9762\u9B06\u624B"
     - key: settings.mute
       value: "\u975C\u97F3"
     - key: settings.unmute
@@ -286,6 +296,16 @@ MonoBehaviour:
       value: "\u4E0A\u4E00\u9801"
     - key: ui.next_page
       value: "\u4E0B\u4E00\u9801"
+    - key: tutorial.welcome_body
+      value: "\u628A\u5929\u7A7A\u7684\u7834\u6D1E\u5168\u90E8\u88DC\u597D\n\u6309\u4F4F\u77F3\u982D\u62D6\u5230\u934B\u88E1\u716E\uFF0C\u716E\u597D\u5F8C\u62D6\u9032\u7834\u6D1E"
+    - key: tutorial.welcome_start
+      value: "\u958B\u59CB"
+    - key: tutorial.rotate_touch
+      value: "\u9EDE\u53F3\u4E0B\u89D2\u6309\u9215\u8F49\u52D5\u5B83"
+    - key: tutorial.rotate_key
+      value: "\u6309 A / D \u8F49\u52D5\u5B83"
+    - key: tutorial.qi_tip
+      value: "\u9748\u6C23\u5728\u6E1B\u5C11\n\u6B78\u96F6\u5C31\u8F38\u4E86\uFF0C\u88DC\u597D\u7834\u6D1E\u80FD\u8CFA\u56DE\u4F86"
   - language: 10
     entries:
     - key: ui.paused
@@ -387,15 +407,25 @@ MonoBehaviour:
     - key: tutorial.skip
       value: Skip
     - key: tutorial.celebrate
-      value: Rift mended - qi flows back
+      value: 'Mended!
+
+        Fill every hole to win'
     - key: tutorial.fill_hole
-      value: Fill the whole rift
+      value: 'Fill the whole hole
+
+        Every purple cell must be covered'
     - key: tutorial.drag_to_grid
-      value: Drag the cooked stone into a rift
+      value: 'Drag the cooked stone into a hole
+
+        Wrong shape? {0}'
     - key: tutorial.wait_cooking
-      value: Wait for it to cook
+      value: 'Wait for it to cook
+
+        The stone brightens while it cooks'
     - key: tutorial.drag_to_pot
-      value: Drag a stone into the pot
+      value: 'Drag a stone into the pot
+
+        Hold it and drag it over the pot'
     - key: settings.mute
       value: Mute
     - key: settings.unmute
@@ -422,3 +452,19 @@ MonoBehaviour:
       value: Prev
     - key: ui.next_page
       value: Next
+    - key: tutorial.welcome_body
+      value: 'Fill every hole in the sky
+
+        Cook stones in the pot, then drag
+        them in'
+    - key: tutorial.welcome_start
+      value: Start
+    - key: tutorial.rotate_touch
+      value: Tap the button at the lower right to turn it
+    - key: tutorial.rotate_key
+      value: Press A / D to turn it
+    - key: tutorial.qi_tip
+      value: 'Qi is running low
+
+        At zero you lose - mending holes earns it
+        back'
