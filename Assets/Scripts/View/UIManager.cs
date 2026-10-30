@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -146,6 +147,15 @@ namespace MendingtheSky
         [SerializeField] private Button levelSelectBackButton;
         [Tooltip("生成关卡列表用的数据库（与 GameManager 指向同一份）")]
         [SerializeField] private LevelDatabase levelDatabase;
+        [Tooltip("日历翻页：上一页 / 下一页 / 页码（只有超过一页时才显示）")]
+        [SerializeField] private Button levelSelectPrevPageButton;
+        [SerializeField] private Button levelSelectNextPageButton;
+        [SerializeField] private TextMeshProUGUI levelSelectPageText;
+
+        /// <summary>每页最多放几个日格：日历 4+3 共 7 格，第 8 槽留给「返回」。</summary>
+        private const int LevelsPerPage = 7;
+        /// <summary>当前是第几页（0 起）。</summary>
+        private int levelPage;
 
         [Header("结算面板补充按钮")]
         [Tooltip("胜利面板主按钮的文本（下一关 / 再玩一次）")]
@@ -542,10 +552,8 @@ namespace MendingtheSky
             }
             levelSelectTemplate.gameObject.SetActive(false);
 
-            int slot = 0;
-            string firstBanner = null;
-            string lastBanner = null;
-
+            // 先把所有非无尽关卡收集起来，再按页切分——日历只有 7 格，第 8 槽是返回
+            var entries = new List<(int index, LevelConfig config)>();
             for (int i = 0; i < levelDatabase.GetTotalLevels(); i++)
             {
                 LevelConfig config = levelDatabase.GetLevel(i);
@@ -553,8 +561,25 @@ namespace MendingtheSky
                 {
                     continue; // 无尽模式不占日历格（主界面已有入口）
                 }
+                entries.Add((i, config));
+            }
 
-                int index = i;
+            int totalPages = Mathf.Max(1, Mathf.CeilToInt(entries.Count / (float)LevelsPerPage));
+            levelPage = Mathf.Clamp(levelPage, 0, totalPages - 1);
+            int pageStart = levelPage * LevelsPerPage;
+            int pageEnd = Mathf.Min(pageStart + LevelsPerPage, entries.Count);
+
+            RefreshLevelSelectPager(totalPages);
+
+            int slot = 0;
+            string firstBanner = null;
+            string lastBanner = null;
+
+            for (int e = pageStart; e < pageEnd; e++)
+            {
+                int index = entries[e].index;
+                LevelConfig config = entries[e].config;
+
                 Button cell = Instantiate(levelSelectTemplate, levelSelectContent);
                 cell.gameObject.SetActive(true);
                 cell.name = $"DayCell_{slot}";
@@ -574,9 +599,10 @@ namespace MendingtheSky
 
                 string entry = FormatLevelEntry(config);
                 TextMeshProUGUI numberText = cell.transform.Find("DayNumber")?.GetComponent<TextMeshProUGUI>();
+                // 日格编号用全局序号，翻页后接着往下数（第 2 页从 8 开始）
                 if (numberText != null)
                 {
-                    numberText.text = (slot + 1).ToString();
+                    numberText.text = (pageStart + slot + 1).ToString();
                 }
                 TextMeshProUGUI nameText = cell.transform.Find("DayName")?.GetComponent<TextMeshProUGUI>();
                 if (nameText != null)
@@ -619,7 +645,36 @@ namespace MendingtheSky
             }
         }
 
-        /// <summary>4 列 × 2 行的格位坐标：格 150、横向间距 40、纵向行距 210。</summary>
+        /// <summary>刷新翻页控件：只有一页时整组隐藏，页码显示「2 / 3」。</summary>
+        private void RefreshLevelSelectPager(int totalPages)
+        {
+            bool multiPage = totalPages > 1;
+
+            if (levelSelectPrevPageButton != null)
+            {
+                levelSelectPrevPageButton.gameObject.SetActive(multiPage);
+                levelSelectPrevPageButton.interactable = levelPage > 0;
+            }
+            if (levelSelectNextPageButton != null)
+            {
+                levelSelectNextPageButton.gameObject.SetActive(multiPage);
+                levelSelectNextPageButton.interactable = levelPage < totalPages - 1;
+            }
+            if (levelSelectPageText != null)
+            {
+                levelSelectPageText.gameObject.SetActive(multiPage);
+                levelSelectPageText.text = multiPage ? $"{levelPage + 1} / {totalPages}" : string.Empty;
+            }
+        }
+
+        /// <summary>翻页（delta = +1 / -1）。页码越界会被 PopulateLevelSelect 夹回有效范围。</summary>
+        private void TurnLevelPage(int delta)
+        {
+            levelPage += delta;
+            PopulateLevelSelect();
+        }
+
+        /// <summary>只显示当前页：4 列 × 2 行的格位坐标。</summary>
         private static Vector2 CellPosition(int slot)
         {
             int column = slot % 4;
@@ -933,6 +988,7 @@ namespace MendingtheSky
             AddClickSound(menuStartButton, menuEndlessButton, menuLevelSelectButton, menuSettingsButton, menuQuitButton);
             AddClickSound(quitCancelButton, quitConfirmButton);
             AddClickSound(levelSelectBackButton);
+            AddClickSound(levelSelectPrevPageButton, levelSelectNextPageButton);
             AddClickSound(hudPauseButton);
             AddClickSound(resumeButton, restartButton, backToIdleButton);
             AddClickSound(loseRetryButton, loseMenuButton);
@@ -1032,6 +1088,14 @@ namespace MendingtheSky
             if (settingsReplayTutorialButton != null)
             {
                 settingsReplayTutorialButton.onClick.AddListener(OnReplayTutorialClicked);
+            }
+            if (levelSelectPrevPageButton != null)
+            {
+                levelSelectPrevPageButton.onClick.AddListener(() => TurnLevelPage(-1));
+            }
+            if (levelSelectNextPageButton != null)
+            {
+                levelSelectNextPageButton.onClick.AddListener(() => TurnLevelPage(1));
             }
             if (musicSlider != null)
             {

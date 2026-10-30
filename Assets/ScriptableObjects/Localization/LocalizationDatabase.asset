@@ -146,6 +146,10 @@ MonoBehaviour:
       value: "\u96E8\u6C34 \xB7 \u4E09\u5019"
     - key: level.7.name
       value: "\u60CA\u86F0 \xB7 \u521D\u5019"
+    - key: ui.prev_page
+      value: "\u4E0A\u4E00\u9875"
+    - key: ui.next_page
+      value: "\u4E0B\u4E00\u9875"
   - language: 41
     entries:
     - key: ui.paused
@@ -278,6 +282,10 @@ MonoBehaviour:
       value: "\u96E8\u6C34 \xB7 \u4E09\u5019"
     - key: level.7.name
       value: "\u9A5A\u87C4 \xB7 \u521D\u5019"
+    - key: ui.prev_page
+      value: "\u4E0A\u4E00\u9801"
+    - key: ui.next_page
+      value: "\u4E0B\u4E00\u9801"
   - language: 10
     entries:
     - key: ui.paused
@@ -410,3 +418,7 @@ MonoBehaviour:
       value: "Yushui \xB7 Third Hou"
     - key: level.7.name
       value: "Jingzhe \xB7 First Hou"
+    - key: ui.prev_page
+      value: Prev
+    - key: ui.next_page
+      value: Next
