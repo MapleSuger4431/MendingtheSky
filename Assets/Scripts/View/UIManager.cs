@@ -593,7 +593,8 @@ namespace MendingtheSky
                 if (background != null)
                 {
                     background.sprite = (unlocked && stars > 0) ? clearedCellSprite : dayCellSprite;
-                    background.color = unlocked ? Color.white : new Color(0.86f, 0.86f, 0.90f, 1f);
+                    // 0.78 比原来的 0.86 更明显：浅米色底上 14% 的压暗几乎看不出来
+                    background.color = unlocked ? Color.white : new Color(0.78f, 0.78f, 0.84f, 1f);
                 }
                 cell.interactable = unlocked;
 
@@ -607,7 +608,8 @@ namespace MendingtheSky
                 TextMeshProUGUI nameText = cell.transform.Find("DayName")?.GetComponent<TextMeshProUGUI>();
                 if (nameText != null)
                 {
-                    nameText.text = entry;
+                    // 日格只有 150 宽，塞不下「立春 · 初候（未解锁）」，未解锁时直接换掉名称
+                    nameText.text = unlocked ? entry : L10n.Get("level.locked_suffix");
                 }
 
                 // 星级 = 右上角竖排朱印，1~3 枚
