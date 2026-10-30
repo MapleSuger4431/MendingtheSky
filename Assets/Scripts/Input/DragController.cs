@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace MendingtheSky
@@ -102,6 +103,27 @@ namespace MendingtheSky
                 HideRotateControls();
                 return;
             }
+            // 触屏和鼠标必须二选一：Unity 会把触摸映射成鼠标事件，两条路径同时跑时
+            // Input.mousePosition 会被「当前活动的那根手指」抢走，表现为灵石在两根手指之间来回跳。
+            if (Input.touchCount > 0)
+            {
+                HandleTouchInput();
+            }
+            else
+            {
+                HandleMouseInput();
+            }
+
+            if (isDragging)
+            {
+                HandleRotateInput();
+                HandleRotateGesture();
+            }
+        }
+
+        /// <summary>鼠标路径（PC）：拾取前先判断是否点在 UI 上，避免点按钮顺手把石头抓起来。</summary>
+        private void HandleMouseInput()
+        {
             if (Input.GetMouseButtonDown(1))
             {
                 // 右键快速取下已放置的灵石（放回背篓，保持已煮），用于纠正放错的块
@@ -109,7 +131,11 @@ namespace MendingtheSky
             }
             if (Input.GetMouseButtonDown(0))
             {
-                OnMouseDown(Input.mousePosition);
+                if (!IsPointerOverUI(-1))
+                {
+                    dragFingerId = -1;
+                    OnMouseDown(Input.mousePosition);
+                }
             }
             if (isDragging)
             {
@@ -121,9 +147,68 @@ namespace MendingtheSky
                 {
                     OnMouseUp(Input.mousePosition);
                 }
-                HandleRotateInput();
-                HandleRotateGesture();
             }
+        }
+
+        /// <summary>
+        /// 触摸路径：拖拽只跟随「拿起石头的那根手指」。
+        /// 其它手指（第二根做旋转手势）无论怎么动都不会影响灵石位置——这是双指抢石头的根因修复。
+        /// </summary>
+        private void HandleTouchInput()
+        {
+            if (isDragging)
+            {
+                if (dragFingerId < 0)
+                {
+                    return;
+                }
+                for (int i = 0; i < Input.touchCount; i++)
+                {
+                    Touch touch = Input.GetTouch(i);
+                    if (touch.fingerId != dragFingerId)
+                    {
+                        continue;
+                    }
+                    if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+                    {
+                        OnMouseUp(touch.position);
+                    }
+                    else
+                    {
+                        OnMouseDrag(touch.position);
+                    }
+                    return;
+                }
+                // 拖拽手指没出现在本帧触摸列表里（系统取消）：就地放下，避免石头卡在手上
+                OnMouseUp(draggingLingShi != null
+                    ? (Vector2)cam.WorldToScreenPoint(draggingLingShi.transform.position)
+                    : Vector2.zero);
+                return;
+            }
+
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                Touch touch = Input.GetTouch(i);
+                if (touch.phase != TouchPhase.Began)
+                {
+                    continue;
+                }
+                // 点在按钮 / 面板上时不拾取（旋转按钮、暂停按钮都在屏幕内）
+                if (IsPointerOverUI(touch.fingerId))
+                {
+                    continue;
+                }
+                dragFingerId = touch.fingerId;
+                OnMouseDown(touch.position);
+                break;
+            }
+        }
+
+        /// <summary>指针是否落在 UGUI 上：触摸传 fingerId，鼠标传 -1。</summary>
+        private static bool IsPointerOverUI(int fingerId)
+        {
+            EventSystem current = EventSystem.current;
+            return current != null && current.IsPointerOverGameObject(fingerId);
         }
 
         public void OnMouseDown(Vector2 screenPos)
@@ -159,8 +244,8 @@ namespace MendingtheSky
         {
             draggingLingShi = ls;
             isDragging = true;
-            // 记录拖拽那根手指：双指手势必须把它排除在外（桌面端为 -1）
-            dragFingerId = Input.touchCount > 0 ? Input.GetTouch(0).fingerId : -1;
+            // dragFingerId 由调用方（HandleMouseInput / HandleTouchInput）在拾取前设定：
+            // 触摸时必须是真正按下石头的那根手指，不能假设是 GetTouch(0)。
             gestureFingerId = -1;
             dragOffset = ls.transform.position - mouseWorld;
             // 用 Kinematic 而不是 simulated=false：后者会让 Collider 退出物理查询，
@@ -424,6 +509,15 @@ namespace MendingtheSky
                 Touch touch = Input.GetTouch(i);
                 if (touch.fingerId == dragFingerId)
                 {
+                    continue;
+                }
+                // 落在按钮 / 面板上的手指不参与旋转手势（否则在按钮上滑动会误触）
+                if (IsPointerOverUI(touch.fingerId))
+                {
+                    if (touch.fingerId == gestureFingerId)
+                    {
+                        gestureFingerId = -1;
+                    }
                     continue;
                 }
 
