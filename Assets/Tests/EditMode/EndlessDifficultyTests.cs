@@ -20,7 +20,18 @@ namespace MendingtheSky.Tests
                 maxCellBonus = 15,
                 intervalTierHoles = 5,
                 intervalReducePerTier = 0f,
-                minIntervalMultiplier = 0.6f
+                minIntervalMultiplier = 0.6f,
+                potStartCount = 2,
+                potTierHoles = 6,
+                potMaxCount = 4,
+                rotationStartChance = 0.4f,
+                rotationTierHoles = 5,
+                rotationIncreasePerTier = 0.05f,
+                rotationMaxChance = 0.9f,
+                precookedStartChance = 0.4f,
+                precookedTierHoles = 5,
+                precookedReducePerTier = 0.1f,
+                precookedMinChance = 0f
             };
         }
 
@@ -73,6 +84,48 @@ namespace MendingtheSky.Tests
             Assert.AreEqual(1f, d.GetCostMultiplier(-3), 0.0001f);
             Assert.AreEqual(0, d.GetCellBonus(-3));
             Assert.AreEqual(1f, d.GetIntervalMultiplier(-3), 0.0001f);
+            Assert.AreEqual(2, d.GetPotCapacity(-3), "锅容量不应因负数输入跌到 1 以下");
+            Assert.AreEqual(0.4f, d.GetRotationChance(-3), 0.0001f);
+            Assert.AreEqual(0.4f, d.GetPrecookedChance(-3), 0.0001f);
+        }
+
+        [Test]
+        public void PotCapacity_StartsSmallAndWidens()
+        {
+            var d = MakeWarm();
+            Assert.AreEqual(2, d.GetPotCapacity(0), "开局锅容量 2");
+            Assert.AreEqual(2, d.GetPotCapacity(5), "不满一档不变");
+            Assert.AreEqual(3, d.GetPotCapacity(6), "每 6 洞 +1");
+            Assert.AreEqual(4, d.GetPotCapacity(12));
+            Assert.AreEqual(4, d.GetPotCapacity(500), "锅容量应封顶 4");
+        }
+
+        [Test]
+        public void RotationChance_RisesAndCaps()
+        {
+            var d = MakeWarm();
+            Assert.AreEqual(0.4f, d.GetRotationChance(0), 0.0001f, "开局 0.4");
+            Assert.AreEqual(0.45f, d.GetRotationChance(5), 0.0001f, "每 5 洞 +0.05");
+            Assert.AreEqual(0.9f, d.GetRotationChance(500), 0.0001f, "概率应封顶 0.9");
+        }
+
+        [Test]
+        public void PrecookedChance_ShrinksToZero()
+        {
+            var d = MakeWarm();
+            Assert.AreEqual(0.4f, d.GetPrecookedChance(0), 0.0001f, "开局 40% 的新石直接煮熟");
+            Assert.AreEqual(0.3f, d.GetPrecookedChance(5), 0.0001f, "每 5 洞 -0.1");
+            Assert.AreEqual(0.2f, d.GetPrecookedChance(10), 0.0001f);
+            Assert.AreEqual(0f, d.GetPrecookedChance(20), 0.0001f, "20 洞后不再预煮熟");
+            Assert.AreEqual(0f, d.GetPrecookedChance(500), 0.0001f);
+        }
+
+        [Test]
+        public void PrecookedChance_HonoursMinimum()
+        {
+            var d = MakeWarm();
+            d.precookedMinChance = 0.1f;
+            Assert.AreEqual(0.1f, d.GetPrecookedChance(50), 0.0001f, "配置了下限时不会降到 0");
         }
     }
 }

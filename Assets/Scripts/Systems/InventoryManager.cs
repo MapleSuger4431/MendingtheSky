@@ -20,6 +20,18 @@ namespace MendingtheSky
         [Tooltip("初始灵石随机朝向：避免拿起来无需旋转即可拼，保留旋转玩法")]
         [SerializeField] private bool randomizeInitialRotation = true;
 
+        /// <summary>
+        /// 无尽模式的动态旋转概率覆盖（&lt; 0 表示不覆盖，仍用 LevelConfig 的固定值）。
+        /// 难度曲线会随补洞数把这个概率往上推。
+        /// </summary>
+        private float rotationChanceOverride = -1f;
+
+        /// <summary>
+        /// 新石直接煮熟的机率（0 = 不预煮熟）。无尽模式的难度曲线会随补洞数把它往下压。
+        /// 作用在每次生成的石头上，开局与补给走同一条路径。
+        /// </summary>
+        private float precookedChance;
+
         [Header("补给节奏（2026-10-27 方案 D）")]
         [Tooltip("开洞时逐块弹出的间隔（秒）")]
         [SerializeField] private float holeSpawnStagger = 0.12f;
@@ -509,6 +521,28 @@ namespace MendingtheSky
             return new List<LingShi>(lingShiList);
         }
 
+        /// <summary>无尽模式：把初始旋转概率改成难度曲线算出的值；传负数恢复用关卡固定值。</summary>
+        public void SetRotationChanceOverride(float chance)
+        {
+            rotationChanceOverride = chance;
+        }
+
+        /// <summary>当前生效的初始旋转概率：有覆盖用覆盖，否则用关卡配置。</summary>
+        private float GetCurrentRotationChance(LevelConfig levelConfig)
+        {
+            if (rotationChanceOverride >= 0f)
+            {
+                return rotationChanceOverride;
+            }
+            return levelConfig != null ? levelConfig.GetInitialRotationChance() : 0f;
+        }
+
+        /// <summary>无尽模式难度曲线：设置「新石直接煮熟」的概率（0 = 不预煮熟）。</summary>
+        public void SetPrecookedChance(float chance)
+        {
+            precookedChance = Mathf.Clamp01(chance);
+        }
+
         /// <summary>可用 = 背篓未煮 + 已煮（冗余触发条件按此计数）。</summary>
         public int GetAvailableCount()
         {
@@ -551,6 +585,9 @@ namespace MendingtheSky
                 }
             }
             lingShiList.Clear();
+            // 注意：precookedChance / rotationChanceOverride 属于「本局难度配置」，由 GameManager
+            // 每次开局显式设置，不能在这里清零——GenerateInitialInventory 会先调 ClearAll，
+            // 清掉的话预煮熟概率就永远不生效。
         }
 
         /// <summary>纯视觉扰动（防止灵石完全静止重叠）。</summary>
@@ -622,7 +659,7 @@ namespace MendingtheSky
             // 单格等旋转不变形没有随机旋转的意义；概率由 LevelConfig.initialRotationChance 控制。
             if (randomizeInitialRotation
                 && shape.HasDistinctRotations()
-                && random.NextDouble() < levelConfig.GetInitialRotationChance())
+                && random.NextDouble() < GetCurrentRotationChance(levelConfig))
             {
                 shape.SetRotationSteps(random.Next(4));
             }
@@ -634,6 +671,11 @@ namespace MendingtheSky
             ls.SetSortingBase(5 + (nextSortingIndex % 30) * 2);
             nextSortingIndex++;
             ls.SetVelocity(new Vector2(((float)random.NextDouble() - 0.5f) * 0.4f, 0f));
+            if (precookedChance > 0f && random.NextDouble() < precookedChance)
+            {
+                // 无尽模式前期：这块直接是煮好的，省一次等待
+                ls.SetState(LingShiState.Cooked);
+            }
             lingShiList.Add(ls);
             return ls;
         }

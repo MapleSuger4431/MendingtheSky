@@ -162,12 +162,14 @@ namespace MendingtheSky
             qiManager.OnQiEmpty += HandleQiEmpty;
             qiManager.Init(config, gridManager);
 
-            // 3) 锅
-            potManager.SetMaxCount(config.GetPotMaxCount());
+            // 3) 锅（无尽模式用难度曲线给出的容量：开局 2，后期涨到 4）
+            potManager.SetMaxCount(GetPotCapacity(config));
             potManager.Clear();
 
             // 4) 背篓初始灵石（按洞切割；方案 D 下不再有冗余补给）
             inventoryManager.InvalidatePendingSpawns();
+            inventoryManager.SetRotationChanceOverride(config.IsEndless() ? GetRotationChance(config) : -1f);
+            inventoryManager.SetPrecookedChance(config.IsEndless() ? GetPrecookedChance(config) : 0f);
             inventoryManager.GenerateInitialInventory(config, gridManager);
 
             // 5) 输入状态复位（手里/暂存/预览全部清空）
@@ -334,6 +336,37 @@ namespace MendingtheSky
             qiManager.SetDifficultyMultiplier(costMultiplier);
             gridManager.SetHoleCellBonus(difficulty.GetCellBonus(filledHoleCount));
             gridManager.SetHoleIntervalMultiplier(difficulty.GetIntervalMultiplier(filledHoleCount));
+            // 锅容量随进度放宽（补偿后期更难转、耗气更快），旋转概率随进度升高
+            potManager.SetMaxCount(difficulty.GetPotCapacity(filledHoleCount));
+            inventoryManager.SetRotationChanceOverride(difficulty.GetRotationChance(filledHoleCount));
+            inventoryManager.SetPrecookedChance(difficulty.GetPrecookedChance(filledHoleCount));
+        }
+
+        /// <summary>无尽模式的难度曲线；普通关返回 null。</summary>
+        private EndlessDifficulty GetDifficulty(LevelConfig config)
+        {
+            return config != null && config.IsEndless() ? config.GetEndlessDifficulty() : null;
+        }
+
+        /// <summary>锅容量：无尽模式走曲线，普通关用关卡固定值。</summary>
+        private int GetPotCapacity(LevelConfig config)
+        {
+            EndlessDifficulty difficulty = GetDifficulty(config);
+            return difficulty != null ? difficulty.GetPotCapacity(filledHoleCount) : config.GetPotMaxCount();
+        }
+
+        /// <summary>初始旋转概率：无尽模式走曲线，普通关用关卡固定值。</summary>
+        private float GetRotationChance(LevelConfig config)
+        {
+            EndlessDifficulty difficulty = GetDifficulty(config);
+            return difficulty != null ? difficulty.GetRotationChance(filledHoleCount) : config.GetInitialRotationChance();
+        }
+
+        /// <summary>新石直接煮熟的概率：无尽模式走曲线，普通关为 0。</summary>
+        private float GetPrecookedChance(LevelConfig config)
+        {
+            EndlessDifficulty difficulty = GetDifficulty(config);
+            return difficulty != null ? difficulty.GetPrecookedChance(filledHoleCount) : 0f;
         }
 
         /// <summary>灵气归零（失败）：只从 Playing 进入 Lose，避免重复结算。</summary>
