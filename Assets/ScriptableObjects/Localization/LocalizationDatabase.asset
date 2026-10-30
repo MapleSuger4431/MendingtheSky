@@ -96,6 +96,18 @@ MonoBehaviour:
       value: "\u952E\u4F4D\u8BBE\u7F6E\uFF08\u5F85\u5B9A\uFF09"
     - key: settings.keybind_todo
       value: "\u952E\u4F4D\u4FEE\u6539\u7A0D\u540E\u5F00\u653E"
+    - key: keybind.reset
+      value: "\u6062\u590D\u9ED8\u8BA4"
+    - key: keybind.conflict
+      value: "\u8BE5\u952E\u5DF2\u88AB\u5176\u4ED6\u52A8\u4F5C\u5360\u7528"
+    - key: keybind.press
+      value: "\u6309\u4E0B\u65B0\u6309\u952E"
+    - key: keybind.rotate_ccw
+      value: "\u9006\u65F6\u9488\u65CB\u8F6C"
+    - key: keybind.rotate_cw
+      value: "\u987A\u65F6\u9488\u65CB\u8F6C"
+    - key: keybind.title
+      value: "\u952E\u4F4D\u8BBE\u7F6E"
     - key: tutorial.skip
       value: "\u8DF3\u8FC7"
     - key: tutorial.celebrate
@@ -212,6 +224,18 @@ MonoBehaviour:
       value: "\u6309\u9375\u8A2D\u5B9A\uFF08\u5F85\u5B9A\uFF09"
     - key: settings.keybind_todo
       value: "\u6309\u9375\u4FEE\u6539\u7A0D\u5F8C\u958B\u653E"
+    - key: keybind.reset
+      value: "\u6062\u5FA9\u9810\u8A2D"
+    - key: keybind.conflict
+      value: "\u8A72\u9375\u5DF2\u88AB\u5176\u4ED6\u52D5\u4F5C\u4F54\u7528"
+    - key: keybind.press
+      value: "\u6309\u4E0B\u65B0\u6309\u9375"
+    - key: keybind.rotate_ccw
+      value: "\u9006\u6642\u91DD\u65CB\u8F49"
+    - key: keybind.rotate_cw
+      value: "\u9806\u6642\u91DD\u65CB\u8F49"
+    - key: keybind.title
+      value: "\u9375\u4F4D\u8A2D\u5B9A"
     - key: tutorial.skip
       value: "\u8DF3\u904E"
     - key: tutorial.celebrate
@@ -328,6 +352,18 @@ MonoBehaviour:
       value: KEY BINDING (TBD)
     - key: settings.keybind_todo
       value: Key rebinding is coming later
+    - key: keybind.reset
+      value: Reset to default
+    - key: keybind.conflict
+      value: That key is already used
+    - key: keybind.press
+      value: Press a key
+    - key: keybind.rotate_ccw
+      value: Rotate counter-clockwise
+    - key: keybind.rotate_cw
+      value: Rotate clockwise
+    - key: keybind.title
+      value: Key Bindings
     - key: tutorial.skip
       value: Skip
     - key: tutorial.celebrate

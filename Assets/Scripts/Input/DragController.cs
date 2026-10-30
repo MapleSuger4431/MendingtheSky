@@ -38,10 +38,7 @@ namespace MendingtheSky
         [SerializeField] private Collider2D basketAreaCollider;
 
         [Header("输入")]
-        [Tooltip("顺时针旋转键（默认 D，右手在鼠标上时左手不用移位）")]
-        [SerializeField] private KeyCode rotateClockwiseKey = KeyCode.D;
-        [Tooltip("逆时针旋转键（默认 A）")]
-        [SerializeField] private KeyCode rotateCounterClockwiseKey = KeyCode.A;
+        [Tooltip("滚轮是否参与旋转（任意方向都算顺时针）")]
         [SerializeField] private bool useMouseScroll = true;
 
         [Header("旋转按钮（移动端）")]
@@ -372,8 +369,9 @@ namespace MendingtheSky
             {
                 return;
             }
-            bool clockwise = Input.GetKeyDown(rotateClockwiseKey);
-            bool counterClockwise = Input.GetKeyDown(rotateCounterClockwiseKey);
+            // 键位来自 GameSettings（可在设置面板里改，默认 D / A）
+            bool clockwise = Input.GetKeyDown(GameSettings.RotateClockwiseKey);
+            bool counterClockwise = Input.GetKeyDown(GameSettings.RotateCounterClockwiseKey);
             if (useMouseScroll && Mathf.Abs(Input.mouseScrollDelta.y) > 0.01f)
             {
                 clockwise = true;

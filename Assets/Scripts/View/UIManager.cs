@@ -111,6 +111,21 @@ namespace MendingtheSky
         [SerializeField] private TextMeshProUGUI settingsHintText;
         [SerializeField] private Button settingsBackButton;
 
+        [Header("键位设置面板")]
+        [SerializeField] private GameObject keybindPanel;
+        [SerializeField] private Button keybindRotateCwButton;
+        [SerializeField] private TextMeshProUGUI keybindRotateCwText;
+        [SerializeField] private Button keybindRotateCcwButton;
+        [SerializeField] private TextMeshProUGUI keybindRotateCcwText;
+        [SerializeField] private Button keybindResetButton;
+        [SerializeField] private Button keybindBackButton;
+        [SerializeField] private TextMeshProUGUI keybindHintText;
+
+        /// <summary>正在等待玩家按下新键。</summary>
+        private bool isListeningKey;
+        /// <summary>true = 改顺时针键，false = 改逆时针键。</summary>
+        private bool listeningClockwise;
+
         [Header("关卡选择")]
         [SerializeField] private GameObject levelSelectPanel;
         [Tooltip("日历格的父物体（不要挂 LayoutGroup，位置由代码按 4×2 计算）")]
@@ -172,10 +187,16 @@ namespace MendingtheSky
             HidePause();
             HideResult();
             HideQuitConfirm();
+            HideKeybind();
             // 移动端（iOS/Android）不允许程序主动退出，直接藏掉入口，避免点了没反应
             if (menuQuitButton != null && Application.isMobilePlatform)
             {
                 menuQuitButton.gameObject.SetActive(false);
+            }
+            // 触屏没有键盘，键位设置那一行直接隐藏
+            if (settingsKeybindButton != null && Application.isMobilePlatform)
+            {
+                settingsKeybindButton.gameObject.SetActive(false);
             }
         }
 
@@ -192,6 +213,13 @@ namespace MendingtheSky
 
         private void Update()
         {
+            // 改键监听优先：此时按键是「要绑定的键」，不能顺带触发暂停
+            if (isListeningKey)
+            {
+                HandleKeyListen();
+                return;
+            }
+
             // ESC 切换暂停：只在 Playing / Paused 两个状态之间切换
             if (Input.GetKeyDown(pauseKey) && gameManager != null)
             {
@@ -278,6 +306,7 @@ namespace MendingtheSky
         {
             HideLevelSelect();
             HideSettings();
+            HideKeybind();
             HidePause();
             HideResult();
             HideQuitConfirm();
@@ -309,6 +338,121 @@ namespace MendingtheSky
             if (quitConfirmPanel != null)
             {
                 quitConfirmPanel.SetActive(false);
+            }
+        }
+
+        // ---------------- 键位设置 ----------------
+
+        /// <summary>打开键位设置面板（从设置面板进入），返回时回到设置。</summary>
+        public void ShowKeybind()
+        {
+            HideSettings();
+            isListeningKey = false;
+            if (keybindPanel != null)
+            {
+                keybindPanel.SetActive(true);
+            }
+            RefreshKeybindPanel();
+            ShowKeybindHint(string.Empty);
+        }
+
+        public void HideKeybind()
+        {
+            isListeningKey = false;
+            if (keybindPanel != null)
+            {
+                keybindPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>把当前键位写回面板（改键后、取消后、切语言后都调这里）。</summary>
+        public void RefreshKeybindPanel()
+        {
+            if (keybindRotateCwText != null)
+            {
+                keybindRotateCwText.text = GameSettings.RotateClockwiseKey.ToString();
+            }
+            if (keybindRotateCcwText != null)
+            {
+                keybindRotateCcwText.text = GameSettings.RotateCounterClockwiseKey.ToString();
+            }
+        }
+
+        private void StartKeyListen(bool clockwise)
+        {
+            isListeningKey = true;
+            listeningClockwise = clockwise;
+            TextMeshProUGUI label = clockwise ? keybindRotateCwText : keybindRotateCcwText;
+            if (label != null)
+            {
+                label.text = L10n.Get("keybind.press");
+            }
+            ShowKeybindHint(string.Empty);
+        }
+
+        private void CancelKeyListen()
+        {
+            isListeningKey = false;
+            RefreshKeybindPanel();
+            ShowKeybindHint(string.Empty);
+        }
+
+        /// <summary>监听下一个按键：Esc 取消，鼠标键忽略，与另一动作冲突则提示并继续等。</summary>
+        private void HandleKeyListen()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                CancelKeyListen();
+                return;
+            }
+            if (!Input.anyKeyDown)
+            {
+                return;
+            }
+            foreach (KeyCode key in System.Enum.GetValues(typeof(KeyCode)))
+            {
+                if (!Input.GetKeyDown(key))
+                {
+                    continue;
+                }
+                if (!GameSettings.IsBindableKey(key))
+                {
+                    continue;
+                }
+                TryBindKey(key);
+                return;
+            }
+        }
+
+        private void TryBindKey(KeyCode key)
+        {
+            KeyCode other = listeningClockwise
+                ? GameSettings.RotateCounterClockwiseKey
+                : GameSettings.RotateClockwiseKey;
+            if (key == other)
+            {
+                // 保持监听状态，让玩家直接再按一个别的键
+                ShowKeybindHint(L10n.Get("keybind.conflict"));
+                return;
+            }
+            if (listeningClockwise)
+            {
+                GameSettings.RotateClockwiseKey = key;
+            }
+            else
+            {
+                GameSettings.RotateCounterClockwiseKey = key;
+            }
+            isListeningKey = false;
+            RefreshKeybindPanel();
+            ShowKeybindHint(string.Empty);
+        }
+
+        private void ShowKeybindHint(string message)
+        {
+            if (keybindHintText != null)
+            {
+                keybindHintText.text = message;
             }
         }
 
@@ -765,6 +909,7 @@ namespace MendingtheSky
             AddClickSound(previewToggleButton, pauseSettingsButton);
             AddClickSound(musicMuteButton, sfxMuteButton);
             AddClickSound(settingsBackButton, settingsLanguageButton, settingsKeybindButton, settingsRotateButton);
+            AddClickSound(keybindRotateCwButton, keybindRotateCcwButton, keybindResetButton, keybindBackButton);
 
             // 主界面
             if (menuStartButton != null)
@@ -824,8 +969,33 @@ namespace MendingtheSky
             }
             if (settingsKeybindButton != null)
             {
-                settingsKeybindButton.onClick.AddListener(() =>
-                    ShowSettingsHint(L10n.Get("settings.keybind_todo")));
+                // 键位设置：进入二级面板逐项改（移动端启动时会把这一行隐藏）
+                settingsKeybindButton.onClick.AddListener(ShowKeybind);
+            }
+            if (keybindRotateCwButton != null)
+            {
+                keybindRotateCwButton.onClick.AddListener(() => StartKeyListen(true));
+            }
+            if (keybindRotateCcwButton != null)
+            {
+                keybindRotateCcwButton.onClick.AddListener(() => StartKeyListen(false));
+            }
+            if (keybindResetButton != null)
+            {
+                keybindResetButton.onClick.AddListener(() =>
+                {
+                    GameSettings.ResetRotateKeys();
+                    RefreshKeybindPanel();
+                    ShowKeybindHint(string.Empty);
+                });
+            }
+            if (keybindBackButton != null)
+            {
+                keybindBackButton.onClick.AddListener(() =>
+                {
+                    HideKeybind();
+                    ShowSettings();
+                });
             }
             if (musicSlider != null)
             {

@@ -36,6 +36,18 @@ namespace MendingtheSky
         /// <summary>旋转输入方式（按钮 / 手势 / 两者）的 PlayerPrefs 键。</summary>
         private const string KeyRotateMode = "settings.rotateMode";
 
+        /// <summary>顺时针旋转键的 PlayerPrefs 键。</summary>
+        private const string KeyRotateClockwise = "settings.key.rotateCW";
+
+        /// <summary>逆时针旋转键的 PlayerPrefs 键。</summary>
+        private const string KeyRotateCounterClockwise = "settings.key.rotateCCW";
+
+        /// <summary>顺时针旋转的出厂键位。</summary>
+        public const KeyCode DefaultRotateClockwiseKey = KeyCode.D;
+
+        /// <summary>逆时针旋转的出厂键位。</summary>
+        public const KeyCode DefaultRotateCounterClockwiseKey = KeyCode.A;
+
         private const float DefaultVolume = 0.8f;
 
         /// <summary>任意设置变化事件：设置面板与预览/音频系统监听后立即生效。</summary>
@@ -48,6 +60,8 @@ namespace MendingtheSky
         private static bool? cachedMusicMuted;
         private static bool? cachedSfxMuted;
         private static RotateInputMode? cachedRotateMode;
+        private static KeyCode? cachedRotateClockwise;
+        private static KeyCode? cachedRotateCounterClockwise;
 
         /// <summary>
         /// 是否显示放置预览高亮（默认 true）。
@@ -247,6 +261,87 @@ namespace MendingtheSky
 
         /// <summary>是否接收「第二根手指上下滑」的旋转手势。</summary>
         public static bool RotateGestureEnabled => RotateMode != RotateInputMode.Buttons;
+
+        /// <summary>
+        /// 顺时针旋转键（默认 D）。写入时持久化并广播 OnChanged，拖拽控制器立刻用新键。
+        /// None 与鼠标键会被拒绝——鼠标键和拖拽 / 右键取下会抢同一套输入。
+        /// </summary>
+        public static KeyCode RotateClockwiseKey
+        {
+            get
+            {
+                if (!cachedRotateClockwise.HasValue)
+                {
+                    cachedRotateClockwise = ReadKey(KeyRotateClockwise, DefaultRotateClockwiseKey);
+                }
+                return cachedRotateClockwise.Value;
+            }
+            set
+            {
+                if (!IsBindableKey(value) || RotateClockwiseKey == value)
+                {
+                    return;
+                }
+                cachedRotateClockwise = value;
+                PlayerPrefs.SetInt(KeyRotateClockwise, (int)value);
+                PlayerPrefs.Save();
+                OnChanged?.Invoke();
+            }
+        }
+
+        /// <summary>逆时针旋转键（默认 A）。</summary>
+        public static KeyCode RotateCounterClockwiseKey
+        {
+            get
+            {
+                if (!cachedRotateCounterClockwise.HasValue)
+                {
+                    cachedRotateCounterClockwise = ReadKey(KeyRotateCounterClockwise, DefaultRotateCounterClockwiseKey);
+                }
+                return cachedRotateCounterClockwise.Value;
+            }
+            set
+            {
+                if (!IsBindableKey(value) || RotateCounterClockwiseKey == value)
+                {
+                    return;
+                }
+                cachedRotateCounterClockwise = value;
+                PlayerPrefs.SetInt(KeyRotateCounterClockwise, (int)value);
+                PlayerPrefs.Save();
+                OnChanged?.Invoke();
+            }
+        }
+
+        /// <summary>把两个旋转键恢复出厂值（D / A）。</summary>
+        public static void ResetRotateKeys()
+        {
+            cachedRotateClockwise = DefaultRotateClockwiseKey;
+            cachedRotateCounterClockwise = DefaultRotateCounterClockwiseKey;
+            PlayerPrefs.SetInt(KeyRotateClockwise, (int)DefaultRotateClockwiseKey);
+            PlayerPrefs.SetInt(KeyRotateCounterClockwise, (int)DefaultRotateCounterClockwiseKey);
+            PlayerPrefs.Save();
+            OnChanged?.Invoke();
+        }
+
+        /// <summary>该键位能否绑定：排除 None 与鼠标键。</summary>
+        public static bool IsBindableKey(KeyCode key)
+        {
+            if (key == KeyCode.None)
+            {
+                return false;
+            }
+            int value = (int)key;
+            return value < (int)KeyCode.Mouse0 || value > (int)KeyCode.Mouse6;
+        }
+
+        /// <summary>读键位并夹掉历史脏值（改过枚举或手改存档时）。</summary>
+        private static KeyCode ReadKey(string prefKey, KeyCode fallback)
+        {
+            int raw = PlayerPrefs.GetInt(prefKey, (int)fallback);
+            KeyCode key = (KeyCode)raw;
+            return IsBindableKey(key) ? key : fallback;
+        }
 
         /// <summary>切换音乐静音并返回新状态（设置面板的「静音」按钮直接用）。</summary>
         public static bool ToggleMusicMuted()
